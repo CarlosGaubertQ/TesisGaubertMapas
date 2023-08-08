@@ -25,7 +25,7 @@ def maps(request):
     point = ee.Geometry.Point(lon, lat)
 
     # Define la escala en metros
-    scale = 30
+    scale = 12
 
     # Carga la colección de imágenes satelitales Landsat
     collection = ee.ImageCollection('LANDSAT/LC08/C01/T1')
