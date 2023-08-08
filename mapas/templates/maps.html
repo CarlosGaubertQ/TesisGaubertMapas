@@ -1,0 +1,202 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<style>
+  #map {
+    top: 0;
+    bottom: 0;
+
+    height: 100vh;
+  }
+
+  .map-overlay {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    z-index: 1;
+  }
+
+  .map-overlay .mapboxgl-ctrl-geocoder {
+    width: 300px;
+  }
+
+  .map-overlay .mapboxgl-ctrl-geocoder .mapboxgl-ctrl-geocoder--input {
+    padding: 10px;
+    font-size: 14px;
+  }
+
+  .map-overlay .mapboxgl-ctrl-geocoder .mapboxgl-ctrl-geocoder--icon-search {
+    display: none;
+  }
+
+  .map-overlay .mapboxgl-ctrl-geocoder .mapboxgl-ctrl-geocoder--button {
+    padding: 10px;
+    background-color: #f8f8f8;
+    border: none;
+    border-left: 1px solid #ccc;
+    cursor: pointer;
+  }
+
+  .map-overlay .mapboxgl-ctrl-geocoder .mapboxgl-ctrl-geocoder--input::-webkit-input-placeholder {
+    margin-right: 30px;
+  }
+
+  .map-overlay .mapboxgl-ctrl-geocoder .mapboxgl-ctrl-geocoder--input:-ms-input-placeholder {
+    margin-right: 30px;
+  }
+
+  .map-overlay .mapboxgl-ctrl-geocoder .mapboxgl-ctrl-geocoder--input::placeholder {
+    margin-right: 30px;
+  }
+
+  .mapboxgl-ctrl-geocoder input[type="text"] {
+    width: 600px;
+    padding: 10px;
+    font-size: 14px;
+  }
+</style>
+<div class=" container-fluid">
+  <div class="row">
+    <div class="col-sm-3 map d-flex flex-column justify-content-between">
+      <form action="" method="post">
+        {% csrf_token %}
+        <div class="row justify-content-between">
+
+          <div class="col mx-4">
+            <div class="my-5">
+              <h2>Descarga de imágenes</h2>
+
+            </div>
+            {{ form }}
+            <!-- <div class="my-5">
+              <label for="latitud">Latitud</label>
+              <input disabled type="text" name="latitud" id="latitud" class="form-control">
+            </div>
+            <div class="my-5">
+              <label for="longitud">Longitud</label>
+              <input disabled type="text" name="longitud" id="longitud" class="form-control">
+            </div>
+            <div class="my-5">
+              <label for="selectSatelite">Satélite</label>
+              <select id="selectSatelite" class="form-select" aria-label="Select satelite">
+                {% for satelite in satelites %}
+                <option value="{{ satelite.id }}">{{ satelite.name }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="my-5">
+              <label for="selectTipoImagen">Tipo de imágen</label>
+              <select id="selectTipoImagen" class="form-select" aria-label="Select tipo imágen">
+                {% for tipo_imagen in tipo_imagenes %}
+                <option value="{{ tipo_imagen.id }}">{{ tipo_imagen.name }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            -->
+
+          </div>
+        </div>
+
+        <div class="row mx-2">
+          <div class="col-md-12">
+            <button type="submit" class="btn btn-primary btn-lg btn-block form-control">Descargar Imágen</button>
+          </div>
+        </div>
+      </form>
+    </div>
+    <div class="col-sm-9">
+      <div class="row justify-content-center">
+        <div class="col-md-12 row justify-content-center m-0">
+          <div id="map">
+            <div class="map-overlay"></div>
+          </div>
+        </div>
+        <script>
+          // TO MAKE THE MAP APPEAR YOU MUST
+          // ADD YOUR ACCESS TOKEN FROM
+          // https://account.mapbox.com
+          mapboxgl.accessToken = 'pk.eyJ1Ijoia2VuZGl0byIsImEiOiJjbGltdGUycmcwZzdmM2huMm5wY3JweW4xIn0.-cq28dcT_FhqiPTzcGX_jw';
+          const map = new mapboxgl.Map({
+            container: 'map', // container ID
+            // Choose from Mapbox's core styles, or make your own style with Mapbox Studio
+            style: 'mapbox://styles/kendito/clio59sp001f801p73zf4bt5p', // style URL
+            center: [11.255, 43.77], // starting position
+            zoom: 13 // starting zoom
+          });
+
+          map.addControl(new mapboxgl.FullscreenControl());
+          // Add geolocate control to the map.
+          map.addControl(
+            new mapboxgl.GeolocateControl({
+              positionOptions: {
+                enableHighAccuracy: true
+              },
+              // When active the map will receive updates to the device's location as it changes.
+              trackUserLocation: true,
+              // Draw an arrow next to the location dot to indicate which direction the device is heading.
+              showUserHeading: true,
+
+            })
+          );
+
+
+          var geocoder = new MapboxGeocoder({
+            accessToken: mapboxgl.accessToken,
+            placeholder: 'Buscar ciudad o localidad',
+            mapboxgl: mapboxgl
+          });
+
+          document.querySelector('.map-overlay').appendChild(geocoder.onAdd(map));
+
+          // Manejar el evento de selección de un lugar del geocodificador
+          geocoder.on('result', function (e) {
+            var result = e.result;
+            map.flyTo({ center: result.center });
+          });
+
+
+          var marker = null;
+
+          map.on('load', function () {
+            if (navigator.geolocation) {
+              navigator.geolocation.getCurrentPosition(function (position) {
+                var userLocation = [position.coords.longitude, position.coords.latitude];
+                //llenar latitud y longitud
+                document.getElementById("id_latitud").value = position.coords.latitude
+                document.getElementById("id_longitud").value = position.coords.longitude
+                map.flyTo({ center: userLocation });
+
+              });
+            } else {
+              console.log('La geolocalización no es soportada por este navegador.');
+            }
+          });
+
+          map.on('click', function (e) {
+            if (marker) {
+              marker.remove(); // Eliminar el marcador existente
+            }
+
+            //llenar latitud y longitud
+            document.getElementById("id_latitud").value = e.lngLat.lat
+            document.getElementById("id_longitud").value = e.lngLat.lat
+
+            marker = new mapboxgl.Marker()
+              .setLngLat(e.lngLat)
+              .addTo(map);
+          });
+
+
+        </script>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+
+
+
+
+
+{% endblock %}
