@@ -4,7 +4,6 @@ from mapas.forms import DescargaImagenForm
 
 from .models import Satelite, Tipo_Imagen
 
-import geemap as gm
 import ee
 
 # Create your views here.
@@ -16,10 +15,11 @@ def maps(request):
 
     # Definir la geometría
     geometry = ee.Geometry.Polygon(
-        [[[-73.13409353690751, -36.70853462255544],
-          [-73.13409353690751, -36.833940272098495],
-          [-72.75849844413408, -36.833940272098495],
-          [-72.75849844413408, -36.70853462255544]]])
+        [[[-73.116576188188, -36.72031552488276],
+          [-73.116576188188, -36.72793461002278],
+          [-73.10140561399979, -36.72793461002278],
+          [-73.10140561399979, -36.72031552488276]]], None, False);
+  
 
     # Filtrar la colección de imágenes Landsat 8
     IMGLandsat8 = ee.ImageCollection('LANDSAT/LC08/C02/T1_RT_TOA') \
@@ -33,16 +33,12 @@ def maps(request):
     # Recortar la imagen con la geometría
     Landsat8Clip = Landsat8Filtro.clip(geometry)
 
-    # Descargar la imagen
-    url = Landsat8Clip.select("B4", "B3", "B2").getDownloadURL({
-        'name': 'Landsat8_30m',
-        'scale': 30,
-        'region': geometry
-    })
 
-    # Descargar el archivo
-    import urllib.request
-    urllib.request.urlretrieve(url, 'Landsat8_30m.tif')
+    imagenRGB = Landsat8Clip.visualize(**{'min': 0,'max': 0.5, 'bands': ['B4', 'B3', 'B2']})
+    extension = 'jpg'
+
+    url = imagenRGB.getThumbURL({ 'region': geometry, 'dimensions': 500, 'format': extension })
+    print(url)
 
     form = DescargaImagenForm()
     return render(
