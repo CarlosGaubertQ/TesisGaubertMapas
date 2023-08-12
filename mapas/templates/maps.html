@@ -13,7 +13,7 @@
     position: absolute;
     top: 10px;
     left: 10px;
-    z-index: 1;
+    z-index: 4;
   }
 
   .map-overlay .mapboxgl-ctrl-geocoder {
@@ -91,6 +91,10 @@
           <div id="map">
             <div class="map-overlay"></div>
           </div>
+          <div class="calculation-box">
+            <p></p>
+            <div id="calculated-area"></div>
+          </div>
         </div>
         <script>
           // TO MAKE THE MAP APPEAR YOU MUST
@@ -112,6 +116,7 @@
             // Set mapbox-gl-draw to draw by default.
             // The user does not have to click the polygon control button first.
             defaultMode: 'draw_polygon'
+            
           });
 
 

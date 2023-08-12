@@ -56,28 +56,3 @@ def maps(request):
       )
 
  
-def get_image_url(latitude, longitude):
-    # Crear un punto a partir de la latitud y longitud
-    point = ee.Geometry.Point(longitude, latitude)
-
-    # Obtener la colección de imágenes satelitales Landsat
-    collection = ee.ImageCollection('LANDSAT/LC08/C01/T1_SR') \
-        .filterBounds(point) \
-        .filter(ee.Filter.lt('CLOUD_COVER', 10)) \
-        .sort('CLOUD_COVER') \
-        .limit(1)
-
-    # Obtener la imagen con la menor cantidad de nubes
-    image = ee.Image(collection.first())
-
-    # Seleccionar las bandas para la codificación en formato PNG
-    bands = ['B4', 'B3', 'B2']  # Bandas roja, verde, azul
-
-    # Obtener la URL de la imagen
-    url = image.getThumbURL({
-        'bands': bands,
-        'scale': 30,  # Escala espacial en metros
-        'region': point
-    })
-
-    return url
