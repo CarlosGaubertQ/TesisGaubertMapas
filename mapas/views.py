@@ -3,48 +3,47 @@ from django.shortcuts import render
 from mapas.forms import DescargaImagenForm
 
 from .models import Satelite, Tipo_Imagen
+
+import geemap as gm
 import ee
-import requests
 
 # Create your views here.
 def maps(request):
   if request.method == 'POST':
-    print(request.POST)
 
-    # Inicializar Earth Engine
-  
-
-    # Inicializa la API de Earth Engine
+    # Inicializar la API de Google Earth Engine
     ee.Initialize()
 
-    # Define las coordenadas de un lugar boscoso o con incendios
-    lat = 37.7749
-    lon = -122.4194
+    # Definir la geometría
+    geometry = ee.Geometry.Polygon(
+        [[[-73.13409353690751, -36.70853462255544],
+          [-73.13409353690751, -36.833940272098495],
+          [-72.75849844413408, -36.833940272098495],
+          [-72.75849844413408, -36.70853462255544]]])
 
-    # Crea un punto de geometría en base a las coordenadas
-    point = ee.Geometry.Point(lon, lat)
+    # Filtrar la colección de imágenes Landsat 8
+    IMGLandsat8 = ee.ImageCollection('LANDSAT/LC08/C02/T1_RT_TOA') \
+        .filterDate('2018-04-01', '2018-12-30') \
+        .filterBounds(geometry) \
+        .filterMetadata('CLOUD_COVER', 'less_than', 20)
 
-    # Define la escala en metros
-    scale = 12
+    # Obtener la imagen mediana
+    Landsat8Filtro = IMGLandsat8.median()
 
-    # Carga la colección de imágenes satelitales Landsat
-    collection = ee.ImageCollection('LANDSAT/LC08/C01/T1')
+    # Recortar la imagen con la geometría
+    Landsat8Clip = Landsat8Filtro.clip(geometry)
 
-    # Filtra la colección por ubicación y fecha
-    filtered_collection = collection.filterBounds(point).filterDate('2021-01-01', '2021-12-31')
+    # Descargar la imagen
+    url = Landsat8Clip.select("B4", "B3", "B2").getDownloadURL({
+        'name': 'Landsat8_30m',
+        'scale': 30,
+        'region': geometry
+    })
 
-    # Selecciona las bandas deseadas
-    selected_bands = ['B4', 'B3', 'B2']
-    filtered_collection = filtered_collection.select(selected_bands)
+    # Descargar el archivo
+    import urllib.request
+    urllib.request.urlretrieve(url, 'Landsat8_30m.tif')
 
-    # Obtiene la imagen más reciente de la colección filtrada
-    image = filtered_collection.sort('system:time_start', False).first()
-
-    # Obtiene la URL de la imagen
-    image_url = image.getThumbURL({'region': point, 'scale': scale})
-
-    # Imprime la URL de la imagen
-    print('URL de la imagen:', image_url)
     form = DescargaImagenForm()
     return render(
         request, 
