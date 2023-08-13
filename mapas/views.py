@@ -5,22 +5,20 @@ from mapas.forms import DescargaImagenForm
 from .models import Satelite, Tipo_Imagen
 
 import ee
-
+import json
 # Create your views here.
 def maps(request):
   if request.method == 'POST':
-
+    geometria = json.loads(request.POST.get('geometria'))
     # Inicializar la API de Google Earth Engine
     ee.Initialize()
 
     # Definir la geometría
     geometry = ee.Geometry.Polygon(
-        [[[-73.13999304682666, -36.716869732364934],
-          [-73.13999304682666, -36.76804125119137],
-          [-73.04257521540576, -36.76804125119137],
-          [-73.04257521540576, -36.716869732364934]]], None, False);
+        [geometria], None, False);
 
   
+
 
     # Filtrar la colección de imágenes Landsat 8
     IMGLandsat8 = ee.ImageCollection('LANDSAT/LC08/C02/T1_RT_TOA') \
