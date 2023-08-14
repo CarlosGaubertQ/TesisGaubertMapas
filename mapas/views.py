@@ -15,12 +15,21 @@ def maps(request):
 
     # Definir la geometría
     geometry = ee.Geometry.Polygon(
-        [geometria], None, False);
+       [geometria], None, False);
 
 
-    print(request.POST.get('tipo_imagen'))
+    satelite = Satelite.objects.get(id=request.POST.get('satelite'))
+    tipoImagen = Tipo_Imagen.objects.get(id=request.POST.get('tipoImagen'))
+    print(satelite)
+    print(tipoImagen)
 
-    
+    if satelite.name == 'Landsat8':
+      descargar_imagen_landsat(geometry)
+    elif satelite.name == 'Sentinel-2':
+      descargar_imagen_sentinel(geometry)
+    else:
+      print("no existe este satelite")
+
 
     form = DescargaImagenForm()
     return render(
