@@ -74,16 +74,10 @@ def descargar_imagen_sentinel(geometry):
       .filterBounds(geometry) \
       .median()
 
-  # Visualization parameters
-  rgbVis = {
-      'min': 0.0,
-      'max': 2500,
-      'gamma': 1.1,
-      'bands': ['B4', 'B3', 'B2']
-  }
+
 
   datasetClip = dataset.clip(geometry)
-  imagenRGB = datasetClip.visualize(**{'min': 0,'max': 0.5, 'bands': ['B4', 'B3', 'B2']})
+  imagenRGB = datasetClip.visualize(**{'min': 0,'max': 2500, 'bands': ['B4', 'B3', 'B2']})
   extension = 'jpg'
 
   url = imagenRGB.getThumbURL({ 'region': geometry, 'dimensions': 500, 'format': extension })
