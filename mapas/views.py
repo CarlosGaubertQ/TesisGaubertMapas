@@ -20,16 +20,17 @@ def maps(request):
 
     satelite = Satelite.objects.get(id=request.POST.get('satelite'))
     tipoImagen = Tipo_Imagen.objects.get(id=request.POST.get('tipoImagen'))
-    print(satelite)
-    print(tipoImagen)
+    fecha_inicio = request.POST.get('fecha_inicio')
+    fecha_fin = request.POST.get('fecha_fin')
+    
 
     if satelite.name == 'Landsat8':
-      descargar_imagen_landsat(geometry)
+      descargar_imagen_landsat(geometry, fecha_inicio, fecha_fin)
     elif satelite.name == 'Sentinel-2':
-      descargar_imagen_sentinel(geometry)
+      descargar_imagen_sentinel(geometry, fecha_inicio, fecha_fin)
     else:
       print("no existe este satelite")
-
+   
 
     form = DescargaImagenForm()
     return render(
@@ -45,10 +46,10 @@ def maps(request):
         {'form': form}
       )
 
-def descargar_imagen_landsat(geometry):
+def descargar_imagen_landsat(geometry, fecha_inicio, fecha_fin):
   # Filtrar la colección de imágenes Landsat 8
   IMGLandsat8 = ee.ImageCollection('LANDSAT/LC08/C02/T1_RT_TOA') \
-      .filterDate('2018-04-01', '2018-12-30') \
+      .filterDate(fecha_inicio, fecha_fin) \
       .filterBounds(geometry) \
       .filterMetadata('CLOUD_COVER', 'less_than', 20)
 
@@ -66,10 +67,10 @@ def descargar_imagen_landsat(geometry):
   print(url)
 
 
-def descargar_imagen_sentinel(geometry):
+def descargar_imagen_sentinel(geometry, fecha_inicio, fecha_fin):
   # Load Sentinel-2 TOA reflectance data
   dataset = ee.ImageCollection('COPERNICUS/S2') \
-      .filterDate('2021-01-01', '2021-01-31') \
+      .filterDate(fecha_inicio, fecha_fin) \
       .filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 20)) \
       .filterBounds(geometry) \
       .median()
