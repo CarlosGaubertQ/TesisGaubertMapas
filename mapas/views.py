@@ -1,3 +1,5 @@
+
+from tkinter import Label
 from django.shortcuts import render
 
 from mapas.forms import DescargaImagenForm
@@ -6,9 +8,14 @@ from .models import Satelite, Tipo_Imagen
 
 import ee
 import json
+from IPython.display import Image, display
+
+
 # Create your views here.
 def maps(request):
   if request.method == 'POST':
+    print(request.POST)
+
     geometria = json.loads(request.POST.get('geometria'))
     # Inicializar la API de Google Earth Engine
     ee.Initialize()
@@ -30,7 +37,6 @@ def maps(request):
       descargar_imagen_sentinel(geometry, fecha_inicio, fecha_fin)
     else:
       print("no existe este satelite")
-   
 
     form = DescargaImagenForm()
     return render(
@@ -61,10 +67,12 @@ def descargar_imagen_landsat(geometry, fecha_inicio, fecha_fin):
 
 
   imagenRGB = Landsat8Clip.visualize(**{'min': 0,'max': 0.5, 'bands': ['B4', 'B3', 'B2']})
-  extension = 'jpg'
+  extension = 'png'
 
   url = imagenRGB.getThumbURL({ 'region': geometry, 'dimensions': 500, 'format': extension })
   print(url)
+  display(Image(url))
+
 
 
 def descargar_imagen_sentinel(geometry, fecha_inicio, fecha_fin):
@@ -83,3 +91,5 @@ def descargar_imagen_sentinel(geometry, fecha_inicio, fecha_fin):
 
   url = imagenRGB.getThumbURL({ 'region': geometry, 'dimensions': 500, 'format': extension })
   print(url)
+
+
