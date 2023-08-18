@@ -1,16 +1,12 @@
 
 from tkinter import Label
 from django.shortcuts import render
-
 from mapas.forms import DescargaImagenForm
-
 from .models import Satelite, Tipo_Imagen
-
 import ee
 import json
-from IPython.display import Image, display
 
-
+from matplotlib.image import imread
 # Create your views here.
 def maps(request):
   if request.method == 'POST':
@@ -32,17 +28,18 @@ def maps(request):
     
 
     if satelite.name == 'Landsat8':
-      descargar_imagen_landsat(geometry, fecha_inicio, fecha_fin)
+      url = descargar_imagen_landsat(geometry, fecha_inicio, fecha_fin)
+      
     elif satelite.name == 'Sentinel-2':
-      descargar_imagen_sentinel(geometry, fecha_inicio, fecha_fin)
+      url = descargar_imagen_sentinel(geometry, fecha_inicio, fecha_fin)
     else:
       print("no existe este satelite")
 
-    form = DescargaImagenForm()
+    
     return render(
         request, 
-        'maps.html',
-        {'form': form}
+        'visualizar_imagen.html',
+        {'url': url}
       )
   else:
     form = DescargaImagenForm()
@@ -54,6 +51,8 @@ def maps(request):
 
 def descargar_imagen_landsat(geometry, fecha_inicio, fecha_fin):
   # Filtrar la colección de imágenes Landsat 8
+
+  
   IMGLandsat8 = ee.ImageCollection('LANDSAT/LC08/C02/T1_RT_TOA') \
       .filterDate(fecha_inicio, fecha_fin) \
       .filterBounds(geometry) \
@@ -71,7 +70,9 @@ def descargar_imagen_landsat(geometry, fecha_inicio, fecha_fin):
 
   url = imagenRGB.getThumbURL({ 'region': geometry, 'dimensions': 500, 'format': extension })
   print(url)
-  display(Image(url))
+  return url
+  
+  
 
 
 
@@ -91,5 +92,12 @@ def descargar_imagen_sentinel(geometry, fecha_inicio, fecha_fin):
 
   url = imagenRGB.getThumbURL({ 'region': geometry, 'dimensions': 500, 'format': extension })
   print(url)
+  return url
+   
 
-
+def vistaSatelite(request, url):
+  return render(
+        request, 
+        'visualizar_imagen.html',
+        {'url': url}
+  )
