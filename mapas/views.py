@@ -9,37 +9,59 @@ import json
 from matplotlib.image import imread
 # Create your views here.
 def maps(request):
+  
   if request.method == 'POST':
     print(request.POST)
-
-    geometria = json.loads(request.POST.get('geometria'))
-    # Inicializar la API de Google Earth Engine
-    ee.Initialize()
-
-    # Definir la geometría
-    geometry = ee.Geometry.Polygon(
-       [geometria], None, False);
-
-
-    satelite = Satelite.objects.get(id=request.POST.get('satelite'))
-    tipoImagen = Tipo_Imagen.objects.get(id=request.POST.get('tipoImagen'))
-    fecha_inicio = request.POST.get('fecha_inicio')
-    fecha_fin = request.POST.get('fecha_fin')
     
+    if request.POST.get('guardar') == '1':
+      print("hola")
+      #guardar imagen en la base de datos
 
-    if satelite.name == 'Landsat8':
-      url = descargar_imagen_landsat(geometry, fecha_inicio, fecha_fin)
+
+
+
+      # REALIZAR GUARDAR IMAGEN
+      form = DescargaImagenForm()
+      return render(
+        request, 
+        'maps.html',
+        {'form': form}
+      )
+    else: 
+      geometria = json.loads(request.POST.get('geometria'))
+      # Inicializar la API de Google Earth Engine
+      ee.Initialize()
+
+      # Definir la geometría
+      geometry = ee.Geometry.Polygon(
+        [geometria], None, False);
+
+
+      satelite = Satelite.objects.get(id=request.POST.get('satelite'))
+      tipoImagen = Tipo_Imagen.objects.get(id=request.POST.get('tipoImagen'))
+      fecha_inicio = request.POST.get('fecha_inicio')
+      fecha_fin = request.POST.get('fecha_fin')
       
-    elif satelite.name == 'Sentinel-2':
-      url = descargar_imagen_sentinel(geometry, fecha_inicio, fecha_fin)
-    else:
-      print("no existe este satelite")
 
-    return render(
-      request, 
-      'visualizar_imagen.html',
-      {'url': url}
-    )
+      if satelite.name == 'Landsat8':
+        url = descargar_imagen_landsat(geometry, fecha_inicio, fecha_fin)
+        
+      elif satelite.name == 'Sentinel-2':
+        url = descargar_imagen_sentinel(geometry, fecha_inicio, fecha_fin)
+      else:
+        print("no existe este satelite")
+
+      return render(
+        request, 
+        'visualizar_imagen.html',
+        {'url': url, 
+        'geometria': request.POST.get('geometria'),
+        'satelite': request.POST.get('satelite'),
+        'tipoImagen': request.POST.get('tipoImagen'),
+        'fecha_inicio': request.POST.get('fecha_inicio'),
+        'fecha_fin': request.POST.get('fecha_fin'),
+        'metros_cuadrados': request.POST.get('metros_cuadrados')}
+      )
   else:
     form = DescargaImagenForm()
     return render(
