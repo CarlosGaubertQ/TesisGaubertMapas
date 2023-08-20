@@ -1,9 +1,9 @@
 from django.urls import path
 
-from mapas.views import maps, vistaSatelite
+from mapas.views import maps, vista_satelite
 
 urlpatterns = [
-   path('', maps),
-   path('vistasatelite/', vistaSatelite, name='vista_satelite')
+   path('', maps, name='main'),
+   path('vista_satelite/<str:url>/', vista_satelite, name='vista_satelite')
  
 ]

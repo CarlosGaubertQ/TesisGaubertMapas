@@ -1,6 +1,6 @@
 
 from tkinter import Label
-from django.shortcuts import render
+from django.shortcuts import redirect, render
 from mapas.forms import DescargaImagenForm
 from .models import Satelite, Tipo_Imagen
 import ee
@@ -35,12 +35,11 @@ def maps(request):
     else:
       print("no existe este satelite")
 
-    
     return render(
-        request, 
-        'visualizar_imagen.html',
-        {'url': url}
-      )
+      request, 
+      'visualizar_imagen.html',
+      {'url': url}
+    )
   else:
     form = DescargaImagenForm()
     return render(
@@ -48,6 +47,14 @@ def maps(request):
         'maps.html',
         {'form': form}
       )
+  
+
+def vista_satelite(request, url):
+  return render(
+        request, 
+        'visualizar_imagen.html',
+        {'url': url}
+  )
 
 def descargar_imagen_landsat(geometry, fecha_inicio, fecha_fin):
   # Filtrar la colección de imágenes Landsat 8
@@ -94,10 +101,3 @@ def descargar_imagen_sentinel(geometry, fecha_inicio, fecha_fin):
   print(url)
   return url
    
-
-def vistaSatelite(request, url):
-  return render(
-        request, 
-        'visualizar_imagen.html',
-        {'url': url}
-  )
