@@ -28,7 +28,6 @@ def maps(request):
         {'form': form}
       )
     elif request.POST.get('guardar') == '0':
-      # REALIZAR GUARDAR IMAGEN
       form = DescargaImagenForm()
       return render(
         request, 
