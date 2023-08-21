@@ -14,12 +14,20 @@ def maps(request):
     print(request.POST)
     
     if request.POST.get('guardar') == '1':
-      print("hola")
+      print("guardar imagen")
       #guardar imagen en la base de datos
 
 
 
 
+      # REALIZAR GUARDAR IMAGEN
+      form = DescargaImagenForm()
+      return render(
+        request, 
+        'maps.html',
+        {'form': form}
+      )
+    elif request.POST.get('guardar') == '0':
       # REALIZAR GUARDAR IMAGEN
       form = DescargaImagenForm()
       return render(
