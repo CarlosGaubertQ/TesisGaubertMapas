@@ -84,6 +84,10 @@ def descargar_imagen_landsat8(geometry, fecha_inicio, fecha_fin, tipoImagen):
     band = ['B4', 'B3', 'B2']
   elif tipoImagen.name == 'False color':
     band = ['B10', 'B4', 'B3']
+  elif tipoImagen.name == 'Agriculture':
+    band = ['B6', 'B5', 'B2']
+  elif tipoImagen.name == 'Urban':
+    band = ['B7', 'B6', 'B4']
   # Inicializar la API de Google Earth Engine
   ee.Initialize()
 
@@ -118,7 +122,10 @@ def descargar_imagen_landsat7(geometry, fecha_inicio, fecha_fin, tipoImagen):
     band = ['B3', 'B2', 'B1']
   elif tipoImagen.name == 'False color':
     band = ['B4', 'B3', 'B2']
-
+  elif tipoImagen.name == 'Agriculture':
+    band = ['B5', 'B4', 'B3']
+  elif tipoImagen.name == 'Urban':
+    band = ['B7', 'B5', 'B3']
   # Inicializar la API de Google Earth Engine
   ee.Initialize()
 
@@ -156,7 +163,10 @@ def descargar_imagen_sentinel(geometry, fecha_inicio, fecha_fin, tipoImagen):
     band = ['B4', 'B3', 'B2']
   elif tipoImagen.name == 'False color':
     band = ['B8', 'B4', 'B3']
-
+  elif tipoImagen.name == 'Agriculture':
+    band = ['B11', 'B8', 'B2']
+  elif tipoImagen.name == 'Urban':
+    band = ['B12', 'B11', 'B4']
   
   # Inicializar la API de Google Earth Engine
   ee.Initialize()
