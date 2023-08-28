@@ -1,32 +1,41 @@
 import ee
+def calcular_porcentaje_bosque(geometry, fecha_inicio, fecha_fin):
+    # Inicializar la API de Google Earth Engine
+    ee.Initialize()
 
-# Inicializa el entorno Earth Engine
+    # Filtrar la colección Landsat 8
+    landsat_collection = ee.ImageCollection('LANDSAT/LC08/C02/T1_RT_TOA') \
+        .filterDate(fecha_inicio, fecha_fin) \
+        .filterBounds(geometry) \
+        .filterMetadata('CLOUD_COVER', 'less_than', 20)
+
+    # Obtener la imagen mediana de la colección
+    landsat_median = landsat_collection.median()
+
+    # Calcular el NDVI (Índice de Vegetación de Diferencia Normalizada)
+    ndvi = landsat_median.normalizedDifference(['B5', 'B4'])
+
+    # Aplicar umbral para identificar bosques (ajusta el umbral según tu necesidad)
+    threshold = 0.2
+    bosque = ndvi.gt(threshold)
+
+    # Calcular el porcentaje de bosque en la región de interés
+    area_bosque = bosque.multiply(ee.Image.pixelArea()).reduceRegion(
+        reducer=ee.Reducer.sum(),
+        geometry=geometry,
+        scale=30  # Resolución espacial de Landsat
+    )
+
+    total_area = geometry.area()
+    porcentaje_bosque = area_bosque.getInfo()['nd'] / total_area.getInfo()
+
+    return porcentaje_bosque
+
+# Llamar a la función para calcular el porcentaje de bosque
 ee.Initialize()
+geometry = ee.Geometry.Polygon([[-122.36, 37.45], [-121.97, 37.45], [-121.97, 37.69], [-122.36, 37.69]])
+fecha_inicio = '2022-01-01'
+fecha_fin = '2022-12-31'
 
-# Define la región de interés (aoi)
-aoi = ee.Geometry.Polygon(
-        [[[-120.23666381835938, 38.2068653630926],
-          [-120.23666381835938, 36.86048636181168],
-          [-118.06060791015625, 36.86048636181168],
-          [-118.06060791015625, 38.2068653630926]]])
-
-# Filtra la colección de imágenes Landsat 7
-l7 = (ee.ImageCollection("LANDSAT/LE07/C01/T1_TOA")
-      .filterDate('2004-01-01', '2004-12-31')
-      .filterBounds(aoi)
-      .sort('CLOUD_COVER', True)
-      .first())
-
-# Calcula el promedio focal
-img_fill = l7.focal_mean(1, 'square', 'pixels', 8)
-
-# Combina la imagen promedio con la imagen Landsat 7 original
-final_image = img_fill.blend(l7)
-
-# Define el estilo para la visualización
-l7_style = {"bands": ["B3", "B2", "B1"], "min": 0.0265324916690588, "max": 0.256043404340744, "gamma": 1}
-
-# Obtiene una URL para la imagen en formato JPG
-image_url = final_image.clip(aoi).getThumbUrl({'min': 0, 'max': 0.3, 'gamma': 1.4, 'bands': 'B3,B2,B1', 'format': 'jpg'})
-
-print("URL de la imagen en formato JPG:", image_url)
+porcentaje = calcular_porcentaje_bosque(geometry, fecha_inicio, fecha_fin)
+print(f'Porcentaje de bosque: {porcentaje * 100:.2f}%')

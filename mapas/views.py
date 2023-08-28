@@ -38,10 +38,11 @@ def maps(request):
       tipoImagen = Tipo_Imagen.objects.get(id=request.POST.get('tipoImagen'))
       fecha_inicio = request.POST.get('fecha_inicio')
       fecha_fin = request.POST.get('fecha_fin')
-
+      porcentaje= 0
       
       if satelite.name == 'Landsat8':
         url = descargar_imagen_landsat8(json.loads(request.POST.get('geometria')), fecha_inicio, fecha_fin, tipoImagen)
+        porcentaje = calcular_porcentaje_bosque(json.loads(request.POST.get('geometria')), fecha_inicio, fecha_fin)
       elif satelite.name == 'Landsat7':
         url = descargar_imagen_landsat7(json.loads(request.POST.get('geometria')), fecha_inicio, fecha_fin, tipoImagen)
       elif satelite.name == 'Sentinel-2':
@@ -58,7 +59,9 @@ def maps(request):
         'tipoImagen': request.POST.get('tipoImagen'),
         'fecha_inicio': request.POST.get('fecha_inicio'),
         'fecha_fin': request.POST.get('fecha_fin'),
-        'metros_cuadrados': request.POST.get('metros_cuadrados')}
+        'metros_cuadrados': request.POST.get('metros_cuadrados'),
+        'porcentaje': porcentaje
+        }
       )
   else:
     form = DescargaImagenForm()
@@ -191,3 +194,38 @@ def descargar_imagen_sentinel(geometry, fecha_inicio, fecha_fin, tipoImagen):
   print(url)
   return url
    
+def calcular_porcentaje_bosque(geometry, fecha_inicio, fecha_fin):
+    # Inicializar la API de Google Earth Engine
+    ee.Initialize()
+
+    geometry = ee.Geometry.Polygon(
+    geometry);
+
+    # Filtrar la colección Landsat 8
+    landsat_collection = ee.ImageCollection('LANDSAT/LC08/C02/T1_RT_TOA') \
+        .filterDate(fecha_inicio, fecha_fin) \
+        .filterBounds(geometry) \
+        .filterMetadata('CLOUD_COVER', 'less_than', 20)
+
+    # Obtener la imagen mediana de la colección
+    landsat_median = landsat_collection.median()
+
+    # Calcular el NDVI (Índice de Vegetación de Diferencia Normalizada)
+    ndvi = landsat_median.normalizedDifference(['B5', 'B4'])
+
+    # Aplicar umbral para identificar bosques (ajusta el umbral según tu necesidad)
+    threshold = 0.2
+    bosque = ndvi.gt(threshold)
+
+    # Calcular el porcentaje de bosque en la región de interés
+    area_bosque = bosque.multiply(ee.Image.pixelArea()).reduceRegion(
+        reducer=ee.Reducer.sum(),
+        geometry=geometry,
+        scale=30  # Resolución espacial de Landsat
+    )
+
+    total_area = geometry.area()
+    porcentaje_bosque = area_bosque.getInfo()['nd'] / total_area.getInfo()
+    resultado = round(porcentaje_bosque * 100, 2)
+    return "{:.2f}".format(resultado)
+
