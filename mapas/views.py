@@ -1,5 +1,4 @@
 
-from tkinter import Label
 from django.shortcuts import render
 from mapas.forms import DescargaImagenForm
 from .models import Satelite, Tipo_Imagen
@@ -10,13 +9,15 @@ def maps(request):
   
   if request.method == 'POST':
     print(request.POST)
-    
     if request.POST.get('guardar') == '1':
       print("guardar imagen")
       #guardar imagen en la base de datos
 
-
-
+      #GUARDAR SHAPEFILE
+      satelite = Satelite.objects.get(id=request.POST.get('satelite'))
+      print(satelite.name)
+      
+      crear_archivo_shapefile(request.POST.get('geometria'), satelite.name, request.POST.get('fecha_inicio'), request.POST.get('fecha_fin'))
 
       # REALIZAR GUARDAR IMAGEN
       form = DescargaImagenForm()
@@ -115,6 +116,7 @@ def descargar_imagen_landsat8(geometry, fecha_inicio, fecha_fin, tipoImagen):
   extension = 'jpg'
 
   url = imagenRGB.getThumbURL({ 'region': geometry, 'dimensions': 500, 'format': extension })
+  
   print(url)
   return url
   
@@ -151,7 +153,7 @@ def descargar_imagen_landsat7(geometry, fecha_inicio, fecha_fin, tipoImagen):
 
   # Obtiene una URL para la imagen en formato JPG
   url = final_image.clip(geometry).getThumbUrl({'min': 0, 'max': 0.3, 'gamma': 1.4, 'bands': band, 'format': 'jpg'})
-
+  
   print("URL de la imagen en formato JPG:", url)
   return url
   
@@ -191,7 +193,9 @@ def descargar_imagen_sentinel(geometry, fecha_inicio, fecha_fin, tipoImagen):
   extension = 'jpg'
 
   url = imagenRGB.getThumbURL({ 'region': geometry, 'dimensions': 500, 'format': extension })
+  
   print(url)
+  
   return url
    
 def calcular_porcentaje_bosque(geometry, fecha_inicio, fecha_fin):
@@ -229,3 +233,16 @@ def calcular_porcentaje_bosque(geometry, fecha_inicio, fecha_fin):
     resultado = round(porcentaje_bosque * 100, 2)
     return "{:.2f}".format(resultado)
 
+def crear_archivo_shapefile(geometry, satelite, fecha_inicio, fecha_fin):
+  ee.Initialize()
+  geometry = ee.Geometry.Polygon(
+    [geometry], None, False);
+  # Exporta la geometría a un shapefile
+  task = ee.batch.Export.table.toDrive(
+      collection=ee.FeatureCollection(geometry),
+      description= satelite + '_' + fecha_inicio + '_' + fecha_fin,
+      folder='TesisGaubert/' + satelite + '/',
+      fileFormat='SHP')
+
+  # Inicia la tarea de exportación
+  task.start()
