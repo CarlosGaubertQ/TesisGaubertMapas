@@ -1,9 +1,12 @@
 
 from django.shortcuts import render
+import requests
 from mapas.forms import DescargaImagenForm
-from .models import Satelite, Tipo_Imagen
+from .models import ImagenSatelital, Satelite, Tipo_Imagen
 import json
 import ee
+from django.core.files.base import ContentFile
+
 # Create your views here.
 def maps(request):
   
@@ -12,6 +15,31 @@ def maps(request):
     if request.POST.get('guardar') == '1':
       print("guardar imagen")
       #guardar imagen en la base de datos
+      print(request.POST)
+      response = requests.get(request.POST.get('url'))
+
+      if response.status_code == 200:
+          imagen_bytes = response.content
+          satelite = Satelite.objects.get(pk=request.POST.get('satelite'))
+          tipo_imagen = Tipo_Imagen.objects.get(pk=request.POST.get('tipoImagen'))
+
+          imagen = ImagenSatelital.objects.create(
+              name="Título de la imagen",
+              coordenadas=request.POST.get('geometria'),
+              satelite=satelite,
+              tipo_imagen=tipo_imagen,
+          )
+          imagen.imagen.save("nombre_de_archivo.jpg", ContentFile(imagen_bytes), save=True)
+
+          imagen.save()
+
+      else:
+        form = DescargaImagenForm()
+        return render(
+          request, 
+          'maps.html',
+          {'form': form}
+        )
 
       #GUARDAR SHAPEFILE
       satelite = Satelite.objects.get(id=request.POST.get('satelite'))

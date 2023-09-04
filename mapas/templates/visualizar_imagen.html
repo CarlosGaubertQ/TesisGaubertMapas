@@ -15,7 +15,7 @@
       <div class="col-md-4">
         <div class="form-group">
           <label for="satelite">Satélite</label>
-          <input class="form-control" id="satelite" name="satelite"  type="text" value="{{ satelite }}" readonly>
+          <input class="form-control" id="satelite" name="satelite" type="text" value="{{ satelite }}" readonly>
         </div>
       </div>
       <div class="col-md-4">
@@ -25,12 +25,13 @@
         </div>
       </div>
     </div>
-    
+
     <div class="row">
       <div class="col-md-4">
         <div class="form-group">
           <label for="fecha_inicio">Fecha Inicio</label>
-          <input class="form-control" id="fecha_inicio" name="fecha_inicio" type="text" value="{{ fecha_inicio }}" readonly>
+          <input class="form-control" id="fecha_inicio" name="fecha_inicio" type="text" value="{{ fecha_inicio }}"
+            readonly>
         </div>
       </div>
       <div class="col-md-4">
@@ -42,7 +43,8 @@
       <div class="col-md-4">
         <div class="form-group">
           <label for="metros_cuadrados">Metros Cuadrados</label>
-          <input class="form-control" id="metros_cuadrados" type="text" name="metros_cuadrados" value="{{ metros_cuadrados }}" readonly>
+          <input class="form-control" id="metros_cuadrados" type="text" name="metros_cuadrados"
+            value="{{ metros_cuadrados }}" readonly>
         </div>
       </div>
     </div>
@@ -55,14 +57,16 @@
       </div>
     </div>
     <input class="form-control d-none" id="guardar" name="guardar" type="text" value="1" readonly>
+    <input class="form-control d-none" id="url" name="url" type="text" value="{{ url }}" readonly>
     <div class="row position-relative p-3">
       <div class="col-md-12 ">
-          <img src="{{url}}" class="img-fluid" alt="Imagen grande" style="width: 100%; height: auto;">
-          <div class="position-absolute p-5" style="top: 0; left: 0;">
-            <button type="submit" class="btn btn-success">Guardar</button>
-            <a href="{% url 'main' %}"><button onclick="getElementById('guardar').value = 0"  class="btn btn-success">Eliminar</button></a> 
-          </div>
-        
+        <img src="{{url}}" class="img-fluid" alt="Imagen grande" style="width: 100%; height: auto;">
+        <div class="position-absolute p-5" style="top: 0; left: 0;">
+          <button type="submit" class="btn btn-success">Guardar</button>
+          <a href="{% url 'main' %}"><button onclick="getElementById('guardar').value = 0"
+              class="btn btn-success">Eliminar</button></a>
+        </div>
+
       </div>
     </div>
   </form>
