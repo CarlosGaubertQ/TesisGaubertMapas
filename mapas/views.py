@@ -34,6 +34,7 @@ def maps(request):
           imagen.imagen.save( satelite.name + "_" + fecha_inicio + "_" + fecha_fin +".jpg", ContentFile(imagen_bytes), save=True)
 
           imagen.save()
+          crear_archivo_shapefile(request.POST.get('geometria'), satelite.name, request.POST.get('fecha_inicio'), request.POST.get('fecha_fin'))
 
       else:
         form = DescargaImagenForm()
@@ -42,12 +43,7 @@ def maps(request):
           'maps.html',
           {'form': form}
         )
-
-      #GUARDAR SHAPEFILE
-      satelite = Satelite.objects.get(id=request.POST.get('satelite'))
-      print(satelite.name)
       
-      crear_archivo_shapefile(request.POST.get('geometria'), satelite.name, request.POST.get('fecha_inicio'), request.POST.get('fecha_fin'))
 
       # REALIZAR GUARDAR IMAGEN
       form = DescargaImagenForm()
@@ -271,7 +267,7 @@ def crear_archivo_shapefile(geometry, satelite, fecha_inicio, fecha_fin):
   task = ee.batch.Export.table.toDrive(
       collection=ee.FeatureCollection(geometry),
       description= satelite + '_' + fecha_inicio + '_' + fecha_fin,
-      folder='TesisGaubert/' + satelite + '/',
+      folder='shapefile/' + satelite + '/',
       fileFormat='SHP')
 
   # Inicia la tarea de exportación
