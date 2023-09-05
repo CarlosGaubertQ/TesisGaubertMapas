@@ -22,14 +22,16 @@ def maps(request):
           imagen_bytes = response.content
           satelite = Satelite.objects.get(pk=request.POST.get('satelite'))
           tipo_imagen = Tipo_Imagen.objects.get(pk=request.POST.get('tipoImagen'))
+          fecha_inicio = request.POST.get('fecha_inicio')
+          fecha_fin = request.POST.get('fecha_fin')
 
           imagen = ImagenSatelital.objects.create(
-              name="Título de la imagen",
+              name=satelite.name + "_" + fecha_inicio + "_" + fecha_fin,
               coordenadas=request.POST.get('geometria'),
               satelite=satelite,
               tipo_imagen=tipo_imagen,
           )
-          imagen.imagen.save("nombre_de_archivo.jpg", ContentFile(imagen_bytes), save=True)
+          imagen.imagen.save( satelite.name + "_" + fecha_inicio + "_" + fecha_fin +".jpg", ContentFile(imagen_bytes), save=True)
 
           imagen.save()
 
