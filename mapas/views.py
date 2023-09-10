@@ -6,21 +6,27 @@ from .models import ImagenSatelital, Satelite, Tipo_Imagen
 import json
 import ee
 from django.core.files.base import ContentFile
+import geopandas as gpd
 
+import numpy as np  # Importa la biblioteca NumPy bajo el alias 'np' para realizar cálculos numéricos.
+from shapely.geometry import MultiPolygon, Polygon, LineString
+from shapely.ops import split
 # Create your views here.
 def maps(request):
   
   if request.method == 'POST':
-    print(request.POST)
+
     if request.POST.get('guardar') == '1':
-      print("guardar imagen")
+    
       #guardar imagen en la base de datos
-      print(request.POST)
+     
       response = requests.get(request.POST.get('url'))
 
       if response.status_code == 200:
-          imagen_bytes = response.content
           satelite = Satelite.objects.get(pk=request.POST.get('satelite'))
+          
+          imagen_bytes = response.content
+          
           tipo_imagen = Tipo_Imagen.objects.get(pk=request.POST.get('tipoImagen'))
           fecha_inicio = request.POST.get('fecha_inicio')
           fecha_fin = request.POST.get('fecha_fin')
@@ -34,8 +40,9 @@ def maps(request):
           imagen.imagen.save( satelite.name + "_" + fecha_inicio + "_" + fecha_fin +".jpg", ContentFile(imagen_bytes), save=True)
 
           imagen.save()
-          crear_archivo_shapefile(request.POST.get('geometria'), satelite.name, request.POST.get('fecha_inicio'), request.POST.get('fecha_fin'))
-
+          
+          geo_path =crear_archivo_shapefile(json.loads(request.POST.get('geometria')), satelite.name, request.POST.get('fecha_inicio'), request.POST.get('fecha_fin'))
+          divisionPoligonos(geo_path)
       else:
         form = DescargaImagenForm()
         return render(
@@ -260,15 +267,124 @@ def calcular_porcentaje_bosque(geometry, fecha_inicio, fecha_fin):
     return "{:.2f}".format(resultado)
 
 def crear_archivo_shapefile(geometry, satelite, fecha_inicio, fecha_fin):
-  ee.Initialize()
-  geometry = ee.Geometry.Polygon(
-    [geometry], None, False);
-  # Exporta la geometría a un shapefile
-  task = ee.batch.Export.table.toDrive(
-      collection=ee.FeatureCollection(geometry),
-      description= satelite + '_' + fecha_inicio + '_' + fecha_fin,
-      folder='shapefile/' + satelite + '/',
-      fileFormat='SHP')
+    # Convierte la lista de listas en una lista de tuplas
 
-  # Inicia la tarea de exportación
-  task.start()
+    print(geometry)
+    polygon = Polygon(tuple(geometry))
+
+    # Crea un GeoDataFrame con la geometría
+    gdf = gpd.GeoDataFrame({'geometry': [polygon]})
+
+    # Define la ruta donde deseas guardar el archivo shapefile
+    ruta_guardar = 'shapefiles/nombre_shapefile.shp'
+
+    # Guarda el GeoDataFrame como un archivo shapefile
+    gdf.to_file(ruta_guardar)
+
+    print(f'Shapefile guardado en: {ruta_guardar}')
+    return ruta_guardar
+
+def divisionPoligonos(geo_path):
+    
+
+    # Lee el archivo Shapefile especificado en 'geo_filepath' y lo carga en un GeoDataFrame (GeoDF).
+    GeoDF = gpd.read_file(geo_path)
+
+    # Selecciona una geometría aleatoria del GeoDataFrame 'GeoDF' y almacénala en la variable 'G'.
+    G = np.random.choice(GeoDF.geometry.values)
+
+    # Calcula la envolvente (rectángulo delimitador) de la geometría almacenada en 'G' y almacena el resultado en 'Rectangle'.
+    Rectangle = G.envelope
+
+    # Longitud del lado de la celda
+    side_length = 0.5
+
+    # Obtiene las coordenadas de la envolvente del rectángulo y las almacena en 'rect_coords'
+    rect_coords = np.array(Rectangle.boundary.coords.xy)
+
+    # Extrae las listas de coordenadas x e y de 'rect_coords'
+    y_list = rect_coords[1]
+    x_list = rect_coords[0]
+
+    # Calcula los valores mínimos y máximos de las coordenadas y para obtener la altura del rectángulo
+    y1 = min(y_list)
+    y2 = max(y_list)
+
+    # Calcula los valores mínimos y máximos de las coordenadas x para obtener el ancho del rectángulo
+    x1 = min(x_list)
+    x2 = max(x_list)
+
+    # Calcula el ancho y la altura del rectángulo
+    width = x2 - x1
+    height = y2 - y1
+
+    # Calcula el número de celdas en la dirección x e y, redondeando al entero más cercano
+    xcells = int(np.round(width / side_length))
+    ycells = int(np.round(height / side_length))
+
+    # Crea una serie de índices igualmente espaciados en las direcciones x e y
+    yindices = np.linspace(y1, y2, ycells + 1)
+    xindices = np.linspace(x1, x2, xcells + 1)
+
+    # Crea una lista de líneas horizontales que atraviesan el rectángulo delimitador en direcciones verticales.
+    horizontal_splitters = [
+        LineString([(x, yindices[0]), (x, yindices[-1])]) for x in xindices
+    ]
+
+    # Crea una lista de líneas verticales que atraviesan el rectángulo delimitador en direcciones horizontales.
+    vertical_splitters = [
+        LineString([(xindices[0], y), (xindices[-1], y)]) for y in yindices
+    ]
+
+    # Asigna la geometría del rectángulo delimitador original a la variable 'result'.
+    result = Rectangle
+
+    # Itera sobre la lista de líneas verticales 'vertical_splitters' y divide la geometría 'result' en múltiples polígonos.
+    for splitter in vertical_splitters:
+        result = MultiPolygon(split(result, splitter))
+
+    # Itera sobre la lista de líneas horizontales 'horizontal_splitters' y divide la geometría 'result' en múltiples polígonos.
+    for splitter in horizontal_splitters:
+        result = MultiPolygon(split(result, splitter))
+
+    # Extrae los polígonos individuales del resultado final 'result' y los almacena en la lista 'square_polygons'.
+    square_polygons = list(result.geoms)
+
+    # Crea un GeoDataFrame a partir de la lista de polígonos 'square_polygons'.
+    df = gpd.GeoDataFrame(square_polygons)
+
+    # Crea un nuevo GeoDataFrame a partir de la lista de polígonos 'square_polygons'.
+    SquareGeoDF  = gpd.GeoDataFrame(square_polygons).rename(columns={0: "geometry"})
+
+    # Crea un nuevo GeoDataFrame a partir de la lista de polígonos 'square_polygons'.
+    SquareGeoDF = gpd.GeoDataFrame(square_polygons)
+
+    # Establece la geometría del GeoDataFrame en la primera columna (índice 0) de los datos.
+    SquareGeoDF = SquareGeoDF.set_geometry(0)
+
+
+    # Extrae las geometrías de 'SquareGeoDF' que se intersectan con la geometría 'G' y las almacena en 'Geoms'.
+    Geoms = SquareGeoDF[SquareGeoDF.intersects(G)].geometry.values
+
+    # Define una variable 'shape' con el valor "square".
+    shape = "square"
+
+    # Define una variable 'thresh' con el valor 0.9.
+    thresh = 0.2
+
+
+    # Si la variable 'shape' es igual a "rhombus", realiza las siguientes operaciones.
+    if shape == "rhombus":
+        # Aplica una función 'rhombus(g)' a cada geometría en 'Geoms' y almacena los resultados en 'Geoms'.
+        #Geoms = [rhombus(g) for g in Geoms]
+        # Filtra las geometrías en 'Geoms' que cumplen con una condición de área y las almacena en 'geoms'.
+        geoms = [g for g in Geoms if ((g.intersection(G)).area / g.area) >= thresh]
+
+    # Si la variable 'shape' es igual a "square", realiza las siguientes operaciones.
+    elif shape == "square":
+    
+        # Filtra las geometrías en 'Geoms' que cumplen con una condición de área y las almacena en 'geoms'.
+        geoms = [g for g in Geoms if ((g.intersection(G)).area / g.area) >= thresh]
+
+    print(geoms)
+    grid = gpd.GeoDataFrame({'geometry':geoms})
