@@ -2,7 +2,10 @@ import geopandas as gpd
 from shapely.geometry import Polygon
 
 # Crea una geometría (en este caso, un polígono)
-polygon = Polygon([[-73.15398858746755,-36.70643089922246],[-73.11974214276574,-36.70656852149412],[-73.12017129620828,-36.72363177314512],[-73.15707849225248,-36.72370056890712],[-73.15398858746755,-36.70643089922246]])
+polygon = Polygon([[-73.13105258175706, -36.705746266993266],
+          [-73.13105258175706, -36.7745272641162],
+          [-72.94256838986253, -36.7745272641162],
+          [-72.94256838986253, -36.705746266993266]])
 
 # Crea un GeoDataFrame con la geometría
 gdf = gpd.GeoDataFrame({'geometry': [polygon]})
