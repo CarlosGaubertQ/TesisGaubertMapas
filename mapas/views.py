@@ -24,7 +24,7 @@ def maps(request):
 
       if response.status_code == 200:
           satelite = Satelite.objects.get(pk=request.POST.get('satelite'))
-          
+          """
           imagen_bytes = response.content
           
           tipo_imagen = Tipo_Imagen.objects.get(pk=request.POST.get('tipoImagen'))
@@ -40,9 +40,10 @@ def maps(request):
           imagen.imagen.save( satelite.name + "_" + fecha_inicio + "_" + fecha_fin +".jpg", ContentFile(imagen_bytes), save=True)
 
           imagen.save()
-          
+          """
+            
           geo_path =crear_archivo_shapefile(json.loads(request.POST.get('geometria')), satelite.name, request.POST.get('fecha_inicio'), request.POST.get('fecha_fin'))
-          divisionPoligonos(geo_path)
+          divisionPoligonos(geo_path, satelite, request.POST.get('fecha_inicio'), request.POST.get('fecha_fin'))
       else:
         form = DescargaImagenForm()
         return render(
@@ -150,7 +151,7 @@ def descargar_imagen_landsat8(geometry, fecha_inicio, fecha_fin, tipoImagen):
 
   url = imagenRGB.getThumbURL({ 'region': geometry, 'dimensions': 500, 'format': extension })
   
-  print(url)
+  #print(url)
   return url
   
 def descargar_imagen_landsat7(geometry, fecha_inicio, fecha_fin, tipoImagen):
@@ -187,7 +188,7 @@ def descargar_imagen_landsat7(geometry, fecha_inicio, fecha_fin, tipoImagen):
   # Obtiene una URL para la imagen en formato JPG
   url = final_image.clip(geometry).getThumbUrl({'min': 0, 'max': 0.3, 'gamma': 1.4, 'bands': band, 'format': 'jpg'})
   
-  print("URL de la imagen en formato JPG:", url)
+  #print("URL de la imagen en formato JPG:", url)
   return url
   
 
@@ -227,7 +228,7 @@ def descargar_imagen_sentinel(geometry, fecha_inicio, fecha_fin, tipoImagen):
 
   url = imagenRGB.getThumbURL({ 'region': geometry, 'dimensions': 500, 'format': extension })
   
-  print(url)
+  #print(url)
   
   return url
    
@@ -269,7 +270,7 @@ def calcular_porcentaje_bosque(geometry, fecha_inicio, fecha_fin):
 def crear_archivo_shapefile(geometry, satelite, fecha_inicio, fecha_fin):
     # Convierte la lista de listas en una lista de tuplas
 
-    print(geometry)
+    #print(geometry)
     polygon = Polygon(tuple(geometry))
 
     # Crea un GeoDataFrame con la geometría
@@ -281,10 +282,10 @@ def crear_archivo_shapefile(geometry, satelite, fecha_inicio, fecha_fin):
     # Guarda el GeoDataFrame como un archivo shapefile
     gdf.to_file(ruta_guardar)
 
-    print(f'Shapefile guardado en: {ruta_guardar}')
+    #print(f'Shapefile guardado en: {ruta_guardar}')
     return ruta_guardar
 
-def divisionPoligonos(geo_path):
+def divisionPoligonos(geo_path, satelite, fecha_incio, fecha_fin):
     
 
     # Lee el archivo Shapefile especificado en 'geo_filepath' y lo carga en un GeoDataFrame (GeoDF).
@@ -297,7 +298,7 @@ def divisionPoligonos(geo_path):
     Rectangle = G.envelope
 
     # Longitud del lado de la celda
-    side_length = 0.5
+    side_length = 0.08
 
     # Obtiene las coordenadas de la envolvente del rectángulo y las almacena en 'rect_coords'
     rect_coords = np.array(Rectangle.boundary.coords.xy)
@@ -349,6 +350,15 @@ def divisionPoligonos(geo_path):
 
     # Extrae los polígonos individuales del resultado final 'result' y los almacena en la lista 'square_polygons'.
     square_polygons = list(result.geoms)
+    index = 1
+    for sq in square_polygons:
+      
+      xx, yy = sq.exterior.coords.xy
+      x = xx.tolist()
+      y = yy.tolist()
+      url = descargar_imagen_landsat8(list(zip(x,y)), fecha_incio, fecha_fin, satelite)
+      print(f"Imagen {index}: {url}")
+      index += 1
 
     # Crea un GeoDataFrame a partir de la lista de polígonos 'square_polygons'.
     df = gpd.GeoDataFrame(square_polygons)
@@ -386,5 +396,5 @@ def divisionPoligonos(geo_path):
         # Filtra las geometrías en 'Geoms' que cumplen con una condición de área y las almacena en 'geoms'.
         geoms = [g for g in Geoms if ((g.intersection(G)).area / g.area) >= thresh]
 
-    print(geoms)
+    #print(geoms)
     grid = gpd.GeoDataFrame({'geometry':geoms})
