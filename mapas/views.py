@@ -298,7 +298,7 @@ def divisionPoligonos(geo_path, satelite, fecha_incio, fecha_fin):
     Rectangle = G.envelope
 
     # Longitud del lado de la celda
-    side_length = 0.08
+    side_length = 0.02
 
     # Obtiene las coordenadas de la envolvente del rectángulo y las almacena en 'rect_coords'
     rect_coords = np.array(Rectangle.boundary.coords.xy)
@@ -350,15 +350,7 @@ def divisionPoligonos(geo_path, satelite, fecha_incio, fecha_fin):
 
     # Extrae los polígonos individuales del resultado final 'result' y los almacena en la lista 'square_polygons'.
     square_polygons = list(result.geoms)
-    index = 1
-    for sq in square_polygons:
-      
-      xx, yy = sq.exterior.coords.xy
-      x = xx.tolist()
-      y = yy.tolist()
-      url = descargar_imagen_landsat8(list(zip(x,y)), fecha_incio, fecha_fin, satelite)
-      print(f"Imagen {index}: {url}")
-      index += 1
+    
 
     # Crea un GeoDataFrame a partir de la lista de polígonos 'square_polygons'.
     df = gpd.GeoDataFrame(square_polygons)
@@ -396,5 +388,13 @@ def divisionPoligonos(geo_path, satelite, fecha_incio, fecha_fin):
         # Filtra las geometrías en 'Geoms' que cumplen con una condición de área y las almacena en 'geoms'.
         geoms = [g for g in Geoms if ((g.intersection(G)).area / g.area) >= thresh]
 
+    index = 1
+    for sq in geoms:
+      xx, yy = sq.exterior.coords.xy
+      x = xx.tolist()
+      y = yy.tolist()
+      url = descargar_imagen_landsat8(list(zip(x,y)), fecha_incio, fecha_fin, satelite)
+      print(f"Imagen {index}: {url}")
+      index += 1
     #print(geoms)
     grid = gpd.GeoDataFrame({'geometry':geoms})
