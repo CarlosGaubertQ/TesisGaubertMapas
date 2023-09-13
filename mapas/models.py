@@ -20,3 +20,8 @@ class ImagenSatelital(models.Model):
 
     def __str__(self):
         return self.name
+    
+class SubImagenSatelital(models.Model):
+    subImagen = models.ImageField(upload_to='imagenes/subimagen/')
+    imagen = models.ForeignKey(ImagenSatelital, on_delete=models.CASCADE)
+

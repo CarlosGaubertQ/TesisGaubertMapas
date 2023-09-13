@@ -2,7 +2,7 @@
 from django.shortcuts import render
 import requests
 from mapas.forms import DescargaImagenForm
-from .models import ImagenSatelital, Satelite, Tipo_Imagen
+from .models import ImagenSatelital, Satelite, Tipo_Imagen, SubImagenSatelital
 import json
 import ee
 from django.core.files.base import ContentFile
@@ -24,7 +24,7 @@ def maps(request):
 
       if response.status_code == 200:
           satelite = Satelite.objects.get(pk=request.POST.get('satelite'))
-          """
+          
           imagen_bytes = response.content
           
           tipo_imagen = Tipo_Imagen.objects.get(pk=request.POST.get('tipoImagen'))
@@ -37,13 +37,14 @@ def maps(request):
               satelite=satelite,
               tipo_imagen=tipo_imagen,
           )
-          imagen.imagen.save( satelite.name + "_" + fecha_inicio + "_" + fecha_fin +".jpg", ContentFile(imagen_bytes), save=True)
+          nombre_imagen = satelite.name + "_" + fecha_inicio + "_" + fecha_fin +".jpg"
+          imagen.imagen.save( nombre_imagen, ContentFile(imagen_bytes), save=True)
 
           imagen.save()
-          """
+          
             
-          geo_path =crear_archivo_shapefile(json.loads(request.POST.get('geometria')), satelite.name, request.POST.get('fecha_inicio'), request.POST.get('fecha_fin'))
-          divisionPoligonos(geo_path, satelite, request.POST.get('fecha_inicio'), request.POST.get('fecha_fin'))
+          geo_path = crear_archivo_shapefile(json.loads(request.POST.get('geometria')), satelite.name, request.POST.get('fecha_inicio'), request.POST.get('fecha_fin'))
+          divisionPoligonos(geo_path, satelite, request.POST.get('fecha_inicio'), request.POST.get('fecha_fin'), tipo_imagen, imagen.pk,request)
       else:
         form = DescargaImagenForm()
         return render(
@@ -285,7 +286,7 @@ def crear_archivo_shapefile(geometry, satelite, fecha_inicio, fecha_fin):
     #print(f'Shapefile guardado en: {ruta_guardar}')
     return ruta_guardar
 
-def divisionPoligonos(geo_path, satelite, fecha_incio, fecha_fin):
+def divisionPoligonos(geo_path, satelite, fecha_inIcio, fecha_fin, tipo_imagen, pk_imagen, request):
     
 
     # Lee el archivo Shapefile especificado en 'geo_filepath' y lo carga en un GeoDataFrame (GeoDF).
@@ -393,8 +394,27 @@ def divisionPoligonos(geo_path, satelite, fecha_incio, fecha_fin):
       xx, yy = sq.exterior.coords.xy
       x = xx.tolist()
       y = yy.tolist()
-      url = descargar_imagen_landsat8(list(zip(x,y)), fecha_incio, fecha_fin, satelite)
+      url = descargar_imagen_landsat8(list(zip(x,y)), fecha_inIcio, fecha_fin, tipo_imagen)
       print(f"Imagen {index}: {url}")
+      response = requests.get(url)
+      if response.status_code == 200:
+        imagen_bytes = response.content
+        imagen = ImagenSatelital.objects.get(pk=pk_imagen)
+        subImagen = SubImagenSatelital.objects.create(   
+            imagen=imagen
+        )
+        nombre_imagen = "Sub_" +satelite.name + "_" + fecha_inIcio + "_" + fecha_fin + "_"+ str(index) +".jpg"
+        subImagen.subImagen.save( nombre_imagen, ContentFile(imagen_bytes), save=True)
+        geoms.loc[index-1, 'image'] = subImagen.SubImagen
+      else:
+        form = DescargaImagenForm()
+        return render(
+          request, 
+          'maps.html',
+          {'form': form}
+        )
+
+
       index += 1
     #print(geoms)
     grid = gpd.GeoDataFrame({'geometry':geoms})
