@@ -375,20 +375,19 @@ def divisionPoligonos(geo_path, satelite, fecha_inIcio, fecha_fin, tipo_imagen, 
     # Define una variable 'thresh' con el valor 0.9.
     thresh = 0.2
 
-
     # Si la variable 'shape' es igual a "rhombus", realiza las siguientes operaciones.
     if shape == "rhombus":
         # Aplica una función 'rhombus(g)' a cada geometría en 'Geoms' y almacena los resultados en 'Geoms'.
         #Geoms = [rhombus(g) for g in Geoms]
         # Filtra las geometrías en 'Geoms' que cumplen con una condición de área y las almacena en 'geoms'.
         geoms = [g for g in Geoms if ((g.intersection(G)).area / g.area) >= thresh]
-
     # Si la variable 'shape' es igual a "square", realiza las siguientes operaciones.
     elif shape == "square":
-    
         # Filtra las geometrías en 'Geoms' que cumplen con una condición de área y las almacena en 'geoms'.
         geoms = [g for g in Geoms if ((g.intersection(G)).area / g.area) >= thresh]
 
+
+    #obtener la sub imagen y guardarla en bd
     index = 1
     for sq in geoms:
       xx, yy = sq.exterior.coords.xy
@@ -398,6 +397,7 @@ def divisionPoligonos(geo_path, satelite, fecha_inIcio, fecha_fin, tipo_imagen, 
       print(f"Imagen {index}: {url}")
       response = requests.get(url)
       if response.status_code == 200:
+        #guardar sub imagen
         imagen_bytes = response.content
         imagen = ImagenSatelital.objects.get(pk=pk_imagen)
         subImagen = SubImagenSatelital.objects.create(   
@@ -405,7 +405,7 @@ def divisionPoligonos(geo_path, satelite, fecha_inIcio, fecha_fin, tipo_imagen, 
         )
         nombre_imagen = "Sub_" +satelite.name + "_" + fecha_inIcio + "_" + fecha_fin + "_"+ str(index) +".jpg"
         subImagen.subImagen.save( nombre_imagen, ContentFile(imagen_bytes), save=True)
-        geoms.loc[index-1, 'image'] = subImagen.SubImagen
+        #geoms.loc[index-1, 'image'] = subImagen.SubImagen [[[[ REVISAR ESTO ]]]]
       else:
         form = DescargaImagenForm()
         return render(
@@ -413,8 +413,7 @@ def divisionPoligonos(geo_path, satelite, fecha_inIcio, fecha_fin, tipo_imagen, 
           'maps.html',
           {'form': form}
         )
-
-
       index += 1
+    
     #print(geoms)
     grid = gpd.GeoDataFrame({'geometry':geoms})
