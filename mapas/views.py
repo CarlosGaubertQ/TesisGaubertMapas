@@ -401,7 +401,8 @@ def divisionPoligonos(geo_path, satelite, fecha_inIcio, fecha_fin, tipo_imagen, 
         imagen_bytes = response.content
         imagen = ImagenSatelital.objects.get(pk=pk_imagen)
         subImagen = SubImagenSatelital.objects.create(   
-            imagen=imagen
+            imagen=imagen,
+            coordenadas=list(zip(x,y))
         )
         nombre_imagen = "Sub_" +satelite.name + "_" + fecha_inIcio + "_" + fecha_fin + "_"+ str(index) +".jpg"
         subImagen.subImagen.save( nombre_imagen, ContentFile(imagen_bytes), save=True)

@@ -15,6 +15,7 @@ class ImagenSatelital(models.Model):
     name = models.CharField(max_length=255)
     coordenadas = models.TextField()
     imagen = models.ImageField(upload_to='imagenes/')
+    imagen_procesada = models.ImageField(upload_to='imagenes/procesada/',null=True, blank=True)
     satelite = models.ForeignKey(Satelite, on_delete=models.CASCADE)
     tipo_imagen = models.ForeignKey(Tipo_Imagen, on_delete=models.CASCADE)
 
@@ -23,5 +24,6 @@ class ImagenSatelital(models.Model):
     
 class SubImagenSatelital(models.Model):
     subImagen = models.ImageField(upload_to='imagenes/subimagen/')
+    coordenadas = models.TextField(null=True, blank=True)
     imagen = models.ForeignKey(ImagenSatelital, on_delete=models.CASCADE)
 
