@@ -11,7 +11,11 @@ import geopandas as gpd
 import numpy as np  # Importa la biblioteca NumPy bajo el alias 'np' para realizar cálculos numéricos.
 from shapely.geometry import MultiPolygon, Polygon, LineString
 from shapely.ops import split
-# Create your views here.
+
+
+
+
+
 def maps(request):
   
   if request.method == 'POST':
@@ -70,6 +74,16 @@ def maps(request):
       )
     else: 
 
+      
+
+      try:
+        shapefile = request.FILES['shapefile']
+        print(shapefile)
+      except Exception as e:
+        # Manejo de excepciones genéricas (captura cualquier excepción no manejada anteriormente)
+        print(f"Error: {e}")
+
+      geometria = json.loads(request.POST.get('geometria'))
       satelite = Satelite.objects.get(id=request.POST.get('satelite'))
       tipoImagen = Tipo_Imagen.objects.get(id=request.POST.get('tipoImagen'))
       fecha_inicio = request.POST.get('fecha_inicio')
@@ -77,12 +91,12 @@ def maps(request):
       porcentaje= 0
       
       if satelite.name == 'Landsat8':
-        url = descargar_imagen_landsat8(json.loads(request.POST.get('geometria')), fecha_inicio, fecha_fin, tipoImagen)
-        porcentaje = calcular_porcentaje_bosque(json.loads(request.POST.get('geometria')), fecha_inicio, fecha_fin)
+        url = descargar_imagen_landsat8(geometria, fecha_inicio, fecha_fin, tipoImagen)
+        porcentaje = calcular_porcentaje_bosque(geometria, fecha_inicio, fecha_fin)
       elif satelite.name == 'Landsat7':
-        url = descargar_imagen_landsat7(json.loads(request.POST.get('geometria')), fecha_inicio, fecha_fin, tipoImagen)
+        url = descargar_imagen_landsat7(geometria, fecha_inicio, fecha_fin, tipoImagen)
       elif satelite.name == 'Sentinel-2':
-        url = descargar_imagen_sentinel(json.loads(request.POST.get('geometria')), fecha_inicio, fecha_fin, tipoImagen)
+        url = descargar_imagen_sentinel(geometria, fecha_inicio, fecha_fin, tipoImagen)
       else:
         print("no existe este satelite")
 

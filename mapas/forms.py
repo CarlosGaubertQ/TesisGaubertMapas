@@ -15,6 +15,7 @@ class TipoImagenForm(ModelForm):
 
 class DescargaImagenForm(forms.Form):
     geometria = forms.FloatField(label="Geometria", widget=forms.TextInput(attrs={'class': 'form-control'}))
+    shapefile = forms.FileField(label="ShapeFile", required=False)
     satelite = forms.ModelChoiceField(label="Satelite", queryset=models.Satelite.objects.all(),widget=forms.Select(attrs={'class': 'form-control'}))
     tipoImagen = forms.ModelChoiceField(label="Tipo de imagen", queryset=models.Tipo_Imagen.objects.all(),widget=forms.Select(attrs={'class': 'form-control'}))
     fecha_inicio = forms.DateField(

@@ -63,7 +63,7 @@
 <div class=" container-fluid">
   <div class="row">
     <div class="col-sm-3 map d-flex flex-column justify-content-between">
-      <form action="" method="post">
+      <form action="" method="post" enctype="multipart/form-data">
         {% csrf_token %}
         <div class="row justify-content-between">
 
@@ -73,7 +73,6 @@
 
             </div>
             {{ form }}
-
 
           </div>
         </div>
@@ -167,6 +166,9 @@
        
 
           map.on('load', function () {
+            var miElemento = document.getElementById("id_shapefile");
+            miElemento.setAttribute("multiple", true);
+
             if (navigator.geolocation) {
               navigator.geolocation.getCurrentPosition(function (position) {
                 var userLocation = [position.coords.longitude, position.coords.latitude];
@@ -181,8 +183,9 @@
             }
           });
 
-          
-
+          document.getElementById("id_shapefile").onchange = function (evt) {
+            document.getElementById("id_geometria").value = "Shapefile cargado."
+          }
           
         </script>
       </div>
