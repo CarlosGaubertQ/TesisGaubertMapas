@@ -7,13 +7,13 @@ import json
 import ee
 from django.core.files.base import ContentFile
 import geopandas as gpd
-
-import numpy as np  # Importa la biblioteca NumPy bajo el alias 'np' para realizar cálculos numéricos.
+import os
+from django.conf import settings
+import numpy as np  
 from shapely.geometry import MultiPolygon, Polygon, LineString
 from shapely.ops import split
 
-
-
+import shutil
 
 
 def maps(request):
@@ -74,21 +74,35 @@ def maps(request):
       )
     else: 
 
-      
-
       try:
-        shapefile = request.FILES['shapefile']
-        print(shapefile)
+        geometria = json.loads(request.POST.get('geometria'))
       except Exception as e:
-        # Manejo de excepciones genéricas (captura cualquier excepción no manejada anteriormente)
-        print(f"Error: {e}")
-
-      geometria = json.loads(request.POST.get('geometria'))
+        pass
+      
       satelite = Satelite.objects.get(id=request.POST.get('satelite'))
       tipoImagen = Tipo_Imagen.objects.get(id=request.POST.get('tipoImagen'))
       fecha_inicio = request.POST.get('fecha_inicio')
       fecha_fin = request.POST.get('fecha_fin')
       porcentaje= 0
+
+      #determinar si existen archivos subidos
+      try:
+        for uploaded_file in request.FILES.getlist('shapefiles'):
+          handle_uploaded_file(uploaded_file)
+        shp_file = get_shp_file(request.FILES.getlist('shapefiles'))
+        
+        geoms = process_shapefile("./temp_shapefiles/" + str(shp_file))
+        for sq in geoms:
+          xx, yy = sq.exterior.coords.xy
+          x = xx.tolist()
+          y = yy.tolist()
+        geometria = list(zip(x,y))
+        
+      except Exception as e:
+        # Manejo de excepciones genéricas (captura cualquier excepción no manejada anteriormente)
+        print(f"Error: {e}")
+
+      
       
       if satelite.name == 'Landsat8':
         url = descargar_imagen_landsat8(geometria, fecha_inicio, fecha_fin, tipoImagen)
@@ -207,8 +221,6 @@ def descargar_imagen_landsat7(geometry, fecha_inicio, fecha_fin, tipoImagen):
   return url
   
 
-
-
 def descargar_imagen_sentinel(geometry, fecha_inicio, fecha_fin, tipoImagen):
   
   band = ['B4', 'B3', 'B2']
@@ -302,91 +314,88 @@ def crear_archivo_shapefile(geometry, satelite, fecha_inicio, fecha_fin):
 
 def divisionPoligonos(geo_path, satelite, fecha_inIcio, fecha_fin, tipo_imagen, pk_imagen, request):
     
-
-    # Lee el archivo Shapefile especificado en 'geo_filepath' y lo carga en un GeoDataFrame (GeoDF).
     GeoDF = gpd.read_file(geo_path)
 
-    # Selecciona una geometría aleatoria del GeoDataFrame 'GeoDF' y almacénala en la variable 'G'.
+    
     G = np.random.choice(GeoDF.geometry.values)
 
-    # Calcula la envolvente (rectángulo delimitador) de la geometría almacenada en 'G' y almacena el resultado en 'Rectangle'.
     Rectangle = G.envelope
 
     # Longitud del lado de la celda
     side_length = 0.02
 
-    # Obtiene las coordenadas de la envolvente del rectángulo y las almacena en 'rect_coords'
+    
     rect_coords = np.array(Rectangle.boundary.coords.xy)
 
-    # Extrae las listas de coordenadas x e y de 'rect_coords'
+    
     y_list = rect_coords[1]
     x_list = rect_coords[0]
 
-    # Calcula los valores mínimos y máximos de las coordenadas y para obtener la altura del rectángulo
+   
     y1 = min(y_list)
     y2 = max(y_list)
 
-    # Calcula los valores mínimos y máximos de las coordenadas x para obtener el ancho del rectángulo
+   
     x1 = min(x_list)
     x2 = max(x_list)
 
-    # Calcula el ancho y la altura del rectángulo
+    
     width = x2 - x1
     height = y2 - y1
 
-    # Calcula el número de celdas en la dirección x e y, redondeando al entero más cercano
+    
     xcells = int(np.round(width / side_length))
     ycells = int(np.round(height / side_length))
 
-    # Crea una serie de índices igualmente espaciados en las direcciones x e y
+    
     yindices = np.linspace(y1, y2, ycells + 1)
     xindices = np.linspace(x1, x2, xcells + 1)
 
-    # Crea una lista de líneas horizontales que atraviesan el rectángulo delimitador en direcciones verticales.
+ 
     horizontal_splitters = [
         LineString([(x, yindices[0]), (x, yindices[-1])]) for x in xindices
     ]
 
-    # Crea una lista de líneas verticales que atraviesan el rectángulo delimitador en direcciones horizontales.
+   
     vertical_splitters = [
         LineString([(xindices[0], y), (xindices[-1], y)]) for y in yindices
     ]
 
-    # Asigna la geometría del rectángulo delimitador original a la variable 'result'.
+    
     result = Rectangle
 
-    # Itera sobre la lista de líneas verticales 'vertical_splitters' y divide la geometría 'result' en múltiples polígonos.
+  
     for splitter in vertical_splitters:
         result = MultiPolygon(split(result, splitter))
 
-    # Itera sobre la lista de líneas horizontales 'horizontal_splitters' y divide la geometría 'result' en múltiples polígonos.
+    
     for splitter in horizontal_splitters:
         result = MultiPolygon(split(result, splitter))
 
-    # Extrae los polígonos individuales del resultado final 'result' y los almacena en la lista 'square_polygons'.
+    
     square_polygons = list(result.geoms)
     
 
-    # Crea un GeoDataFrame a partir de la lista de polígonos 'square_polygons'.
+    
     df = gpd.GeoDataFrame(square_polygons)
 
-    # Crea un nuevo GeoDataFrame a partir de la lista de polígonos 'square_polygons'.
+    
     SquareGeoDF  = gpd.GeoDataFrame(square_polygons).rename(columns={0: "geometry"})
 
-    # Crea un nuevo GeoDataFrame a partir de la lista de polígonos 'square_polygons'.
+    
     SquareGeoDF = gpd.GeoDataFrame(square_polygons)
 
-    # Establece la geometría del GeoDataFrame en la primera columna (índice 0) de los datos.
+    
     SquareGeoDF = SquareGeoDF.set_geometry(0)
 
 
-    # Extrae las geometrías de 'SquareGeoDF' que se intersectan con la geometría 'G' y las almacena en 'Geoms'.
+    
     Geoms = SquareGeoDF[SquareGeoDF.intersects(G)].geometry.values
 
-    # Define una variable 'shape' con el valor "square".
+    
     shape = "square"
 
-    # Define una variable 'thresh' con el valor 0.9.
+
     thresh = 0.2
 
     # Si la variable 'shape' es igual a "rhombus", realiza las siguientes operaciones.
@@ -395,13 +404,12 @@ def divisionPoligonos(geo_path, satelite, fecha_inIcio, fecha_fin, tipo_imagen, 
         #Geoms = [rhombus(g) for g in Geoms]
         # Filtra las geometrías en 'Geoms' que cumplen con una condición de área y las almacena en 'geoms'.
         geoms = [g for g in Geoms if ((g.intersection(G)).area / g.area) >= thresh]
-    # Si la variable 'shape' es igual a "square", realiza las siguientes operaciones.
     elif shape == "square":
-        # Filtra las geometrías en 'Geoms' que cumplen con una condición de área y las almacena en 'geoms'.
+        
         geoms = [g for g in Geoms if ((g.intersection(G)).area / g.area) >= thresh]
 
 
-    #obtener la sub imagen y guardarla en bd
+    
     index = 1
     for sq in geoms:
       xx, yy = sq.exterior.coords.xy
@@ -420,7 +428,7 @@ def divisionPoligonos(geo_path, satelite, fecha_inIcio, fecha_fin, tipo_imagen, 
         )
         nombre_imagen = "Sub_" +satelite.name + "_" + fecha_inIcio + "_" + fecha_fin + "_"+ str(index) +".jpg"
         subImagen.subImagen.save( nombre_imagen, ContentFile(imagen_bytes), save=True)
-        #geoms.loc[index-1, 'image'] = subImagen.SubImagen [[[[ REVISAR ESTO ]]]]
+       
       else:
         form = DescargaImagenForm()
         return render(
@@ -432,3 +440,38 @@ def divisionPoligonos(geo_path, satelite, fecha_inIcio, fecha_fin, tipo_imagen, 
     
     #print(geoms)
     grid = gpd.GeoDataFrame({'geometry':geoms})
+
+
+
+def get_shp_file(files):
+    for uploaded_file in files:
+        if uploaded_file.name.endswith('.shp'):
+            return uploaded_file
+    return None
+
+def handle_uploaded_file(f):
+    temp_folder = os.path.join(settings.MEDIA_ROOT, 'temp_shapefiles')
+    os.makedirs(temp_folder, exist_ok=True)  # Crea la carpeta temporal si no existe
+    file_path = os.path.join(temp_folder, f.name)  # Conserva el nombre original del archivo
+    with open(file_path, 'wb+') as destination:
+        for chunk in f.chunks():
+            destination.write(chunk)
+    return file_path
+
+def process_shapefile(file):
+    print(file)
+    gdf = gpd.read_file(file)
+    geometries = gdf.geometry  
+    return geometries
+  
+def eliminar_contenido_carpeta(carpeta_a_eliminar ):
+    if os.path.exists(carpeta_a_eliminar):
+        for contenido in os.listdir(carpeta_a_eliminar):
+            contenido_ruta = os.path.join(carpeta_a_eliminar, contenido)
+            if os.path.isfile(contenido_ruta):
+                os.remove(contenido_ruta)      
+            elif os.path.isdir(contenido_ruta):
+                shutil.rmtree(contenido_ruta)
+        os.rmdir(carpeta_a_eliminar)
+    else:
+        print(f"La carpeta '{carpeta_a_eliminar}' no existe.")
