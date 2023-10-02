@@ -143,6 +143,11 @@ def vista_satelite(request, url):
         {'url': url}
   )
 
+def evaluacion(request):
+   return render(
+     request,
+     'evaluacion.html',
+   )
 
 def descargar_imagen_landsat8(geometry, fecha_inicio, fecha_fin, tipoImagen):
   band = ['B4', 'B3', 'B2']

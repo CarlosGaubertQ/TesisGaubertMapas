@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+  .full-height {
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.max-height {
+    max-height: 100%;
+}
+.bg-primary {
+  position: relative;
+  overflow: hidden;
+  text-align: center;
+  color: #fff;
+}
+
+.bg-primary img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.content {
+  margin-top: 20px;
+}
+</style>
+<div class="container-fluid">
+  <div class="row">
+      <div class="col-12 ">
+          <h2 class="p-3">Evaluación geometría</h2>
+          <div class="input-group p-4 ">
+              <select class="form-control">
+                  <option>Opción 1</option>
+                  <option>Opción 2</option>
+                  <option>Opción 3</option>
+              </select>
+              <div class="input-group-append">
+                  <button class="btn btn-primary" type="button">Agregar</button>
+              </div>
+          </div>
+      </div>
+      <div class="col-6 full-height">
+        <img src="https://via.placeholder.com/150" alt="Imagen de ejemplo">
+      </div>
+      <div class="col-6 full-height">
+        <h1>Contenido de la segunda caja centrado</h1>
+      </div>
+  </div>
+</div>
+{% endblock %}
