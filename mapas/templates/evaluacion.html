@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-
+{% load static %}
 {% block content %}
 <style>
   .full-height {
@@ -7,49 +7,60 @@
     display: flex;
     justify-content: center;
     align-items: center;
-}
+  }
 
-.max-height {
+  .max-height {
     max-height: 100%;
-}
-.bg-primary {
-  position: relative;
-  overflow: hidden;
-  text-align: center;
-  color: #fff;
-}
+  }
 
-.bg-primary img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
+  .image-container {
+    width: 500px;
+    /* Ancho fijo de 300px para el contenedor */
+    height: 500px;
+    /* Alto fijo de 300px para el contenedor */
+    border: 1px solid #000000;
+    /* Borde blanco de 10px alrededor de la imagen */
+    overflow: hidden;
+    /* Para asegurarse de que la imagen no se desborde del contenedor */
+    text-align: center;
+    /* Centra la imagen horizontalmente en el contenedor */
+  }
 
-.content {
-  margin-top: 20px;
-}
+  .image-container img {
+    width: 100%;
+    /* La imagen ocupará el 100% del contenedor */
+    height: 100%;
+    /* La altura ocupará el 100% del contenedor */
+    object-fit: contain;
+    /* La imagen se ajustará para caber dentro del contenedor sin distorsionarse */
+  }
+
+  .content {
+    margin-top: 20px;
+  }
+
+  .img-bottonn {
+    width: 1em;
+    /* Establece el ancho de la imagen como 1 em (equivalente al tamaño de un h2) */
+    height: 1em;
+    /* Establece la altura de la imagen como 1 em */
+  }
 </style>
 <div class="container-fluid">
   <div class="row">
-      <div class="col-12 ">
-          <h2 class="p-3">Evaluación geometría</h2>
-          <div class="input-group p-4 ">
-              <select class="form-control">
-                  <option>Opción 1</option>
-                  <option>Opción 2</option>
-                  <option>Opción 3</option>
-              </select>
-              <div class="input-group-append">
-                  <button class="btn btn-primary" type="button">Agregar</button>
-              </div>
-          </div>
+    <div class="col-12">
+      <h2 class="p-3"><input type="image" src="https://cdn-icons-png.flaticon.com/512/37/37426.png" class="img-bottonn"
+          alt="Regresar" onclick="history.back()">&nbsp&nbsp&nbsp Evaluación Área de estudio {{ imagen_satelital.name }}
+      </h2>
+    </div>
+    <div class="col-6 full-height">
+      <div class="image-container">
+        <img src="{{ imagen_satelital.imagen.url }}" alt="Imagen de ejemplo">
       </div>
-      <div class="col-6 full-height">
-        <img src="https://via.placeholder.com/150" alt="Imagen de ejemplo">
-      </div>
-      <div class="col-6 full-height">
-        <h1>Contenido de la segunda caja centrado</h1>
-      </div>
+    </div>
+    <div class="col-6 full-height">
+      <img src="data:image/png;base64,{{ imagen_base64 }}" alt="Gráfico">
+    </div>
   </div>
 </div>
 {% endblock %}

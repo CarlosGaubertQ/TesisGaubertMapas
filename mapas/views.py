@@ -1,7 +1,9 @@
 
+import base64
+import io
 from django.shortcuts import render
 import requests
-from mapas.forms import DescargaImagenForm
+from mapas.forms import DescargaImagenForm, ImagenesDescargadasForm
 from .models import ImagenSatelital, Satelite, Tipo_Imagen, SubImagenSatelital
 import json
 import ee
@@ -13,127 +15,180 @@ import numpy as np
 from shapely.geometry import MultiPolygon, Polygon, LineString
 from shapely.ops import split
 
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
+
 import shutil
+
 
 
 def maps(request):
   
   if request.method == 'POST':
 
-    if request.POST.get('guardar') == '1':
-    
-      #guardar imagen en la base de datos
+    try:
+
+      id_imagen = request.POST.get('imagenes')
+
+      imagen_satelital = ImagenSatelital.objects.get(pk=id_imagen)
+      años = [2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020]
+      decrecimiento_forestal = [100, 95, 92, 89, 85, 80, 75, 70, 65, 60, 55] 
+
+
+      plt.figure(figsize=(8, 6))
+      plt.plot(años, decrecimiento_forestal, marker='o', color='b', linestyle='-', linewidth=2, markersize=8)
+      plt.title('Decrecimiento Forestal por Año')
+      plt.xlabel('Año')
+      plt.ylabel('Porcentaje de Decrecimiento')
+      plt.grid(True)
+      plt.xticks(años, rotation=45) 
+
      
-      response = requests.get(request.POST.get('url'))
+      buffer = io.BytesIO()
+      plt.savefig(buffer, format='png')
+      buffer.seek(0)
+      plt.close()
 
-      if response.status_code == 200:
-          satelite = Satelite.objects.get(pk=request.POST.get('satelite'))
-          
-          imagen_bytes = response.content
-          
-          tipo_imagen = Tipo_Imagen.objects.get(pk=request.POST.get('tipoImagen'))
-          fecha_inicio = request.POST.get('fecha_inicio')
-          fecha_fin = request.POST.get('fecha_fin')
-          titulo = request.POST.get('titulo')
-          nombre_imagen = titulo +"_" + satelite.name + "_" + fecha_inicio + "_" + fecha_fin +".png"
-          imagen = ImagenSatelital.objects.create(
-              name=nombre_imagen,
-              coordenadas=request.POST.get('geometria'),
-              satelite=satelite,
-              tipo_imagen=tipo_imagen,
-          )
-          imagen.imagen.save( nombre_imagen, ContentFile(imagen_bytes), save=True)
+      imagen_base64 = base64.b64encode(buffer.read()).decode()
 
-          imagen.save()
-          
+
+      contexto = {
+          'imagen_base64': imagen_base64,
+          'imagen_satelital': imagen_satelital,
+      }
+      return render(
+        request,
+        'evaluacion.html',
+        contexto
+      
+      )
+    except Exception as e:
+      print(f"ERROR : {e}")
+   
+      if request.POST.get('guardar') == '1':
+      
+        #guardar imagen en la base de datos
+      
+        response = requests.get(request.POST.get('url'))
+
+        if response.status_code == 200:
+            satelite = Satelite.objects.get(pk=request.POST.get('satelite'))
             
-          geo_path = crear_archivo_shapefile(json.loads(request.POST.get('geometria')), satelite.name, request.POST.get('fecha_inicio'), request.POST.get('fecha_fin'))
-          divisionPoligonos(geo_path, satelite, request.POST.get('fecha_inicio'), request.POST.get('fecha_fin'), tipo_imagen, imagen.pk,request, titulo)
-      else:
+            imagen_bytes = response.content
+            
+            tipo_imagen = Tipo_Imagen.objects.get(pk=request.POST.get('tipoImagen'))
+            fecha_inicio = request.POST.get('fecha_inicio')
+            fecha_fin = request.POST.get('fecha_fin')
+            titulo = request.POST.get('titulo')
+            nombre_imagen = titulo +"_" + satelite.name + "_" + fecha_inicio + "_" + fecha_fin +".png"
+            imagen = ImagenSatelital.objects.create(
+                name=nombre_imagen,
+                coordenadas=request.POST.get('geometria'),
+                satelite=satelite,
+                tipo_imagen=tipo_imagen,
+            )
+            imagen.imagen.save( nombre_imagen, ContentFile(imagen_bytes), save=True)
+
+            imagen.save()
+            
+              
+            geo_path = crear_archivo_shapefile(json.loads(request.POST.get('geometria')), satelite.name, request.POST.get('fecha_inicio'), request.POST.get('fecha_fin'))
+            divisionPoligonos(geo_path, satelite, request.POST.get('fecha_inicio'), request.POST.get('fecha_fin'), tipo_imagen, imagen.pk,request, titulo)
+        else:
+          form = DescargaImagenForm()
+          form_imagenes =ImagenesDescargadasForm()
+          return render(
+            request, 
+            'maps.html',
+            {'form': form,
+            'form_imagenes': form_imagenes}
+          )
+        
+
+        # REALIZAR GUARDAR IMAGEN
         form = DescargaImagenForm()
+        form_imagenes = ImagenesDescargadasForm()
+        return render(
+            request, 
+            'maps.html',
+            {'form': form,
+            'form_imagenes': form_imagenes}
+        )
+      elif request.POST.get('guardar') == '0':
+        form = DescargaImagenForm()
+        form_imagenes = ImagenesDescargadasForm()
+        return render(
+            request, 
+            'maps.html',
+            {'form': form,
+            'form_imagenes': form_imagenes}
+        )
+      else: 
+
+        try:
+          geometria = json.loads(request.POST.get('geometria'))
+        except Exception as e:
+          pass
+        
+        satelite = Satelite.objects.get(id=request.POST.get('satelite'))
+        tipoImagen = Tipo_Imagen.objects.get(id=request.POST.get('tipoImagen'))
+        fecha_inicio = request.POST.get('fecha_inicio')
+        fecha_fin = request.POST.get('fecha_fin')
+        porcentaje= 0
+        if( request.POST.get('geometria') == 'Shapefile cargado.'):
+        #determinar si existen archivos subidos
+          try:
+            for uploaded_file in request.FILES.getlist('shapefiles'):
+              handle_uploaded_file(uploaded_file)
+            shp_file = get_shp_file(request.FILES.getlist('shapefiles'))
+            
+            geoms = process_shapefile("./temp_shapefiles/" + str(shp_file))
+            for sq in geoms:
+              xx, yy = sq.exterior.coords.xy
+              x = xx.tolist()
+              y = yy.tolist()
+            geometria = list(zip(x,y))
+            
+          except Exception as e:
+            # Manejo de excepciones genéricas (captura cualquier excepción no manejada anteriormente)
+            print(f"Error: {e}")
+
+        
+        
+        if satelite.name == 'Landsat8':
+          url = descargar_imagen_landsat8(geometria, fecha_inicio, fecha_fin, tipoImagen)
+          porcentaje = calcular_porcentaje_bosque(geometria, fecha_inicio, fecha_fin)
+        elif satelite.name == 'Landsat7':
+          url = descargar_imagen_landsat7(geometria, fecha_inicio, fecha_fin, tipoImagen)
+        elif satelite.name == 'Sentinel-2':
+          url = descargar_imagen_sentinel(geometria, fecha_inicio, fecha_fin, tipoImagen, 1500)
+        else:
+          print("no existe este satelite")
+
         return render(
           request, 
-          'maps.html',
-          {'form': form}
+          'visualizar_imagen.html',
+          {'url': url, 
+          'geometria': request.POST.get('geometria'),
+          'satelite': request.POST.get('satelite'),
+          'tipoImagen': request.POST.get('tipoImagen'),
+          'fecha_inicio': request.POST.get('fecha_inicio'),
+          'fecha_fin': request.POST.get('fecha_fin'),
+          'metros_cuadrados': request.POST.get('metros_cuadrados'),
+          'titulo': request.POST.get('titulo'),
+          'porcentaje': porcentaje
+          }
         )
-      
-
-      # REALIZAR GUARDAR IMAGEN
-      form = DescargaImagenForm()
-      return render(
-        request, 
-        'maps.html',
-        {'form': form}
-      )
-    elif request.POST.get('guardar') == '0':
-      form = DescargaImagenForm()
-      return render(
-        request, 
-        'maps.html',
-        {'form': form}
-      )
-    else: 
-
-      try:
-        geometria = json.loads(request.POST.get('geometria'))
-      except Exception as e:
-        pass
-      
-      satelite = Satelite.objects.get(id=request.POST.get('satelite'))
-      tipoImagen = Tipo_Imagen.objects.get(id=request.POST.get('tipoImagen'))
-      fecha_inicio = request.POST.get('fecha_inicio')
-      fecha_fin = request.POST.get('fecha_fin')
-      porcentaje= 0
-      if( request.POST.get('geometria') == 'Shapefile cargado.'):
-      #determinar si existen archivos subidos
-        try:
-          for uploaded_file in request.FILES.getlist('shapefiles'):
-            handle_uploaded_file(uploaded_file)
-          shp_file = get_shp_file(request.FILES.getlist('shapefiles'))
-          
-          geoms = process_shapefile("./temp_shapefiles/" + str(shp_file))
-          for sq in geoms:
-            xx, yy = sq.exterior.coords.xy
-            x = xx.tolist()
-            y = yy.tolist()
-          geometria = list(zip(x,y))
-          
-        except Exception as e:
-          # Manejo de excepciones genéricas (captura cualquier excepción no manejada anteriormente)
-          print(f"Error: {e}")
-
-      
-      
-      if satelite.name == 'Landsat8':
-        url = descargar_imagen_landsat8(geometria, fecha_inicio, fecha_fin, tipoImagen)
-        porcentaje = calcular_porcentaje_bosque(geometria, fecha_inicio, fecha_fin)
-      elif satelite.name == 'Landsat7':
-        url = descargar_imagen_landsat7(geometria, fecha_inicio, fecha_fin, tipoImagen)
-      elif satelite.name == 'Sentinel-2':
-        url = descargar_imagen_sentinel(geometria, fecha_inicio, fecha_fin, tipoImagen, 2000)
-      else:
-        print("no existe este satelite")
-
-      return render(
-        request, 
-        'visualizar_imagen.html',
-        {'url': url, 
-        'geometria': request.POST.get('geometria'),
-        'satelite': request.POST.get('satelite'),
-        'tipoImagen': request.POST.get('tipoImagen'),
-        'fecha_inicio': request.POST.get('fecha_inicio'),
-        'fecha_fin': request.POST.get('fecha_fin'),
-        'metros_cuadrados': request.POST.get('metros_cuadrados'),
-        'titulo': request.POST.get('titulo'),
-        'porcentaje': porcentaje
-        }
-      )
+ 
   else:
     form = DescargaImagenForm()
+    form_imagenes = ImagenesDescargadasForm()
     return render(
         request, 
         'maps.html',
-        {'form': form}
+        {'form': form,
+         'form_imagenes': form_imagenes}
       )
   
 
@@ -145,6 +200,7 @@ def vista_satelite(request, url):
   )
 
 def evaluacion(request):
+   print(request.POST)
    return render(
      request,
      'evaluacion.html',
@@ -426,10 +482,12 @@ def divisionPoligonos(geo_path, satelite, fecha_inIcio, fecha_fin, tipo_imagen, 
        
       else:
         form = DescargaImagenForm()
+        form_imagenes = ImagenesDescargadasForm()
         return render(
-          request, 
-          'maps.html',
-          {'form': form}
+            request, 
+            'maps.html',
+            {'form': form,
+            'form_imagenes': form_imagenes}
         )
       index += 1
     

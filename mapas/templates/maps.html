@@ -54,6 +54,17 @@
     padding: 10px;
     font-size: 14px;
   }
+
+  .Rent {
+    /*width: 200px;*/
+    height: 80%;
+  }
+
+  .btn-acordeon {
+    text-decoration: none;
+    outline: none;
+
+  }
 </style>
 
 <script src="https://unpkg.com/@turf/turf@6/turf.min.js"></script>
@@ -63,26 +74,91 @@
 <div class=" container-fluid">
   <div class="row">
     <div class="col-sm-3 map d-flex flex-column justify-content-between">
-      <form action="" method="post" enctype="multipart/form-data">
-        {% csrf_token %}
-        <div class="row justify-content-between">
 
-          <div class="col mx-4">
-            <div class="my-5">
-              <h4>Descarga de imágenes</h4>
+
+
+      <div id="accordion">
+        <div class="card">
+          <div class="card-header" id="headingOne">
+            <h5 class="mb-0">
+              <button class="btn btn-link Rent btn-acordeon" data-toggle="collapse" data-target="#collapseOne"
+                aria-expanded="true" aria-controls="collapseOne">
+                Descarga de imágenes
+              </button>
+            </h5>
+          </div>
+
+          <div id="collapseOne" class="collapse show" aria-labelledby="headingOne" data-parent="#accordion">
+            <div class="card-body">
+
+              <!-- Contenido del primer formulario -->
+              <form action="" method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+                <div class="row justify-content-between">
+
+                  <div class="col mx-4">
+                    <div class="my-5">
+                      <h4 class="Rent">Descarga de imágenes</h4>
+
+                    </div>
+                    {{ form }}
+
+                  </div>
+                </div>
+
+                <div class="row mx-2">
+                  <div class="col-md-12">
+                    <button type="submit" class="btn btn-primary btn-sm btn-block form-control ">Descargar
+                      Imágen</button>
+                  </div>
+                </div>
+              </form>
 
             </div>
-            {{ form }}
-
           </div>
         </div>
 
-        <div class="row mx-2">
-          <div class="col-md-12">
-            <button type="submit" class="btn btn-primary btn-lg btn-block form-control">Descargar Imágen</button>
+        <div class="card">
+          <div class="card-header" id="headingTwo">
+            <h5 class="mb-0">
+              <button class="btn btn-link collapsed Rent btn-acordeon" data-toggle="collapse" data-target="#collapseTwo"
+                aria-expanded="false" aria-controls="collapseTwo">
+                Evaluar área de estudio
+              </button>
+            </h5>
+          </div>
+
+          <div id="collapseTwo" class="collapse" aria-labelledby="headingTwo" data-parent="#accordion">
+            <div class="card-body">
+
+              <!-- Contenido del segundo formulario -->
+              <form action="" method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+                <div class="row justify-content-between">
+
+                  <div class="col mx-4">
+                    <div class="my-5">
+                      <h4>Evaluar área de estudio</h4>
+
+                    </div>
+                    {{ form_imagenes }}
+
+                  </div>
+                </div>
+
+                <div class="row mx-2">
+                  <div class="col-md-12">
+                    <button type="submit" class="btn btn-primary btn-sm btn-block form-control">Evaluar</button>
+                  </div>
+                </div>
+
+              </form>
+
+            </div>
           </div>
         </div>
-      </form>
+      </div>
+
     </div>
     <div class="col-sm-9">
       <div class="row justify-content-center">
@@ -95,7 +171,15 @@
             <div id="calculated-area"></div>
           </div>
         </div>
+        <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js"></script>
+
+        <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>
         <script>
+
+          $(document).ready(function () {
+            // Inicialización de Bootstrap (esta función es específica de Bootstrap 4)
+            $('[data-toggle="collapse"]').collapse();
+          });
           // TO MAKE THE MAP APPEAR YOU MUST
           // ADD YOUR ACCESS TOKEN FROM
           // https://account.mapbox.com
