@@ -15,6 +15,7 @@ import numpy as np
 from shapely.geometry import MultiPolygon, Polygon, LineString
 from shapely.ops import split
 
+
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
@@ -69,32 +70,44 @@ def maps(request):
       if request.POST.get('guardar') == '1':
       
         #guardar imagen en la base de datos
-      
-        response = requests.get(request.POST.get('url'))
 
-        if response.status_code == 200:
-            satelite = Satelite.objects.get(pk=request.POST.get('satelite'))
-            
-            imagen_bytes = response.content
-            
-            tipo_imagen = Tipo_Imagen.objects.get(pk=request.POST.get('tipoImagen'))
-            fecha_inicio = request.POST.get('fecha_inicio')
-            fecha_fin = request.POST.get('fecha_fin')
-            titulo = request.POST.get('titulo')
-            nombre_imagen = titulo +"_" + satelite.name + "_" + fecha_inicio + "_" + fecha_fin +".png"
-            imagen = ImagenSatelital.objects.create(
-                name=nombre_imagen,
-                coordenadas=request.POST.get('geometria'),
-                satelite=satelite,
-                tipo_imagen=tipo_imagen,
-            )
-            imagen.imagen.save( nombre_imagen, ContentFile(imagen_bytes), save=True)
+        fechas_dict = [2018, 2019, 2020, 2021]
 
-            imagen.save()
-            
+        for i, fecha in enumerate(fechas_dict):
+          start_date = str(fecha) + "-01-01" 
+          fecha += 1
+          end_date = str(fecha) + "-01-01" 
+          url = descargar_imagen_sentinel(json.loads(request.POST.get('geometria')), start_date, end_date,Tipo_Imagen.objects.get(id=request.POST.get('tipoImagen')) , 1500)
+          print(f"[INFO] Imagen {i+1} url: {url}")
+          response = requests.get(url)
+
+          if response.status_code == 200:
               
-            geo_path = crear_archivo_shapefile(json.loads(request.POST.get('geometria')), satelite.name, request.POST.get('fecha_inicio'), request.POST.get('fecha_fin'))
-            divisionPoligonos(geo_path, satelite, request.POST.get('fecha_inicio'), request.POST.get('fecha_fin'), tipo_imagen, imagen.pk,request, titulo)
+              
+              
+              print(f"[INFO] Guardando imagen {i+1} en la base de datos ")
+              satelite = Satelite.objects.get(pk=request.POST.get('satelite'))
+              
+              imagen_bytes = response.content
+              
+              tipo_imagen = Tipo_Imagen.objects.get(pk=request.POST.get('tipoImagen'))
+              
+              titulo = request.POST.get('titulo')
+              nombre_imagen = titulo +"_" + satelite.name + "_" + start_date + "_" + end_date +".png"
+              imagen = ImagenSatelital.objects.create(
+                  name=nombre_imagen,
+                  coordenadas=request.POST.get('geometria'),
+                  satelite=satelite,
+                  tipo_imagen=tipo_imagen,
+              )
+              imagen.imagen.save( nombre_imagen, ContentFile(imagen_bytes), save=True)
+
+              imagen.save()
+              
+
+        #        
+              
+              #divisionPoligonos(geo_path, satelite, request.POST.get('fecha_inicio'), request.POST.get('fecha_fin'), tipo_imagen, imagen.pk,request, titulo)
         else:
           form = DescargaImagenForm()
           form_imagenes =ImagenesDescargadasForm()
@@ -125,9 +138,10 @@ def maps(request):
             'form_imagenes': form_imagenes}
         )
       else: 
-
+        
         try:
           geometria = json.loads(request.POST.get('geometria'))
+          
         except Exception as e:
           pass
         
@@ -154,8 +168,11 @@ def maps(request):
             # Manejo de excepciones genéricas (captura cualquier excepción no manejada anteriormente)
             print(f"Error: {e}")
 
+        geo_path = crear_archivo_shapefile(geometria)
+        print(f"Generando archivo shapefile en {geo_path}")
         
         
+
         if satelite.name == 'Landsat8':
           url = descargar_imagen_landsat8(geometria, fecha_inicio, fecha_fin, tipoImagen)
           porcentaje = calcular_porcentaje_bosque(geometria, fecha_inicio, fecha_fin)
@@ -356,7 +373,7 @@ def calcular_porcentaje_bosque(geometry, fecha_inicio, fecha_fin):
     resultado = round(porcentaje_bosque * 100, 2)
     return "{:.2f}".format(resultado)
 
-def crear_archivo_shapefile(geometry, satelite, fecha_inicio, fecha_fin):
+def crear_archivo_shapefile(geometry):
     polygon = Polygon(tuple(geometry))
     gdf = gpd.GeoDataFrame({'geometry': [polygon]})
     ruta_guardar = 'shapefiles/nombre_shapefile.shp'
@@ -528,3 +545,5 @@ def eliminar_contenido_carpeta(carpeta_a_eliminar ):
         os.rmdir(carpeta_a_eliminar)
     else:
         print(f"La carpeta '{carpeta_a_eliminar}' no existe.")
+
+
