@@ -29,12 +29,24 @@ def maps(request):
   if request.method == 'POST':
 
     try:
-
+      
+      print(request.POST)
       id_imagen = request.POST.get('imagenes')
 
+      imagen = ImagenSatelital.objects.get(pk=id_imagen)
+
+      decrecimiento_forestal = []
+      subimagenes = SubImagenSatelital.objects.filter(imagen=imagen)
+      for subimagen in subimagenes:
+        print(f"agregando imagen año {subimagen.anio_imagen} con porcentaje: {subimagen.porcentaje}")
+        decrecimiento_forestal.append(float(subimagen.porcentaje))
+      print(decrecimiento_forestal)
       imagen_satelital = ImagenSatelital.objects.get(pk=id_imagen)
-      años = [2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020]
-      decrecimiento_forestal = [100, 95, 92, 89, 85, 80, 75, 70, 65, 60, 55] 
+      print(f"{imagen_satelital.name}")
+  
+      
+      años = [ 2018, 2019, 2020, 2021]
+      
 
 
       plt.figure(figsize=(8, 6))
@@ -56,7 +68,7 @@ def maps(request):
 
       contexto = {
           'imagen_base64': imagen_base64,
-          'imagen_satelital': imagen_satelital,
+          'subimagenes': subimagenes,
       }
       return render(
         request,
@@ -68,58 +80,24 @@ def maps(request):
       print(f"ERROR : {e}")
    
       if request.POST.get('guardar') == '1':
-        calcular_porcentaje_bosques(request)
-        #guardar imagen en la base de datos
-        """
-        fechas_dict = [2018, 2019, 2020, 2021]
         
-        for i, fecha in enumerate(fechas_dict):
-          start_date = str(fecha) + "-01-01" 
-          fecha += 1
-          end_date = str(fecha) + "-01-01" 
-          url = descargar_imagen_sentinel(json.loads(request.POST.get('geometria')), start_date, end_date,Tipo_Imagen.objects.get(id=request.POST.get('tipoImagen')) , 1500)
-          print(f"[INFO] Imagen {i+1} url: {url}")
-          response = requests.get(url)
+        #guardar imagen en la base de datos
+        tipo_imagen = Tipo_Imagen.objects.get(pk=request.POST.get('tipoImagen'))
+        satelite = Satelite.objects.get(id=request.POST.get('satelite'))    
+        titulo = request.POST.get('titulo')
+        
+        imagen = ImagenSatelital.objects.create(
+            name=titulo,
+            coordenadas=request.POST.get('geometria'),
+            satelite=satelite,
+            tipo_imagen=tipo_imagen,
+        )
 
-          if response.status_code == 200:
-              
-              
-              
-              print(f"[INFO] Guardando imagen {i+1} en la base de datos ")
-              satelite = Satelite.objects.get(pk=request.POST.get('satelite'))
-              
-              imagen_bytes = response.content
-              
-              tipo_imagen = Tipo_Imagen.objects.get(pk=request.POST.get('tipoImagen'))
-              
-              titulo = request.POST.get('titulo')
-              nombre_imagen = titulo +"_" + satelite.name + "_" + start_date + "_" + end_date +".png"
-              imagen = ImagenSatelital.objects.create(
-                  name=nombre_imagen,
-                  coordenadas=request.POST.get('geometria'),
-                  satelite=satelite,
-                  tipo_imagen=tipo_imagen,
-              )
-              imagen.imagen.save( nombre_imagen, ContentFile(imagen_bytes), save=True)
+        imagen.save()
+        
+        calcular_porcentaje_bosques(request, imagen.pk)
 
-              imagen.save()
-              
-
-                
-              
-              #divisionPoligonos(geo_path, satelite, request.POST.get('fecha_inicio'), request.POST.get('fecha_fin'), tipo_imagen, imagen.pk,request, titulo)
-        else:
-          form = DescargaImagenForm()
-          form_imagenes =ImagenesDescargadasForm()
-          return render(
-            request, 
-            'maps.html',
-            {'form': form,
-            'form_imagenes': form_imagenes}
-          )
-        """
-
-        # REALIZAR GUARDAR IMAGEN
+        
         form = DescargaImagenForm()
         form_imagenes = ImagenesDescargadasForm()
         return render(
@@ -538,7 +516,7 @@ def extract_patch_from_masked_data(red_clip, green_clip, blue_clip, mask):
 
     return red_patch, green_patch, blue_patch
 
-def calcular_porcentaje_bosques(request):
+def calcular_porcentaje_bosques(request, pk_imagen):
     # Autenticación
     gauth = GoogleAuth()
     gauth.LocalWebserverAuth()  # Se abrirá una ventana del navegador para autenticación
@@ -800,20 +778,19 @@ def calcular_porcentaje_bosques(request):
             fecha += 1
             end_date = str(fecha) + "-01-01" 
             
-            tipo_imagen = Tipo_Imagen.objects.get(pk=request.POST.get('tipoImagen'))
             
+            imagen = ImagenSatelital.objects.get(pk=pk_imagen)
             titulo = request.POST.get('titulo')
             nombre_imagen = titulo +"_" + satelite.name + "_" + start_date + "_" + end_date +".png"
-            imagen = ImagenSatelital.objects.create(
-                name=nombre_imagen,
-                coordenadas=request.POST.get('geometria'),
-                satelite=satelite,
-                tipo_imagen=tipo_imagen,
+            imagen = SubImagenSatelital.objects.create(
+                imagen=imagen,
+                porcentaje= str((forest / len(geoms))* 100),
+                anio_imagen = fecha-1
             )
-            imagen.imagen.save( nombre_imagen, ContentFile(cv2.cvtColor(data_8bit, cv2.COLOR_RGB2BGR)), save=True)
+            imagen.subImagen.save( nombre_imagen, ContentFile(cv2.cvtColor(data_8bit, cv2.COLOR_RGB2BGR)), save=True)
 
             imagen.save()
-            cv2.imwrite(f"./imagenes/{nombre_imagen}", cv2.cvtColor(data_8bit, cv2.COLOR_RGB2BGR))
+            cv2.imwrite(f"./imagenes/subimagen/{nombre_imagen}", cv2.cvtColor(data_8bit, cv2.COLOR_RGB2BGR))
             #cv2.imwrite(f'full_geom.png', cv2.cvtColor(data_8bit, cv2.COLOR_RGB2BGR))
-            print(f"Porcentaje de bosques en imagen para el año {start_date}: {(forest / len(geoms))* 100:.2f}%")
+            print(f"Porcentaje de bosques en imagen para el año {fecha-1}: {(forest / len(geoms))* 100:.2f}%")
 
