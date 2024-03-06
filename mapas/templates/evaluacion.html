@@ -3,86 +3,83 @@
 {% block content %}
 <style>
   .full-height {
-    height: 100vh;
     display: flex;
     justify-content: center;
     align-items: center;
-  }
-
-  .max-height {
-    max-height: 100%;
+    height: calc(100vh - 56px); /* 100% del viewport height menos el alto del encabezado (56px) */
   }
 
   .image-container {
-    width: 500px;
-    /* Ancho fijo de 300px para el contenedor */
-    height: 500px;
-    /* Alto fijo de 300px para el contenedor */
+    width: 600px;
     border: 1px solid #000000;
-    /* Borde blanco de 10px alrededor de la imagen */
     overflow: hidden;
-    /* Para asegurarse de que la imagen no se desborde del contenedor */
     text-align: center;
-    /* Centra la imagen horizontalmente en el contenedor */
   }
 
   .image-container img {
     width: 100%;
-    /* La imagen ocupará el 100% del contenedor */
-    height: 100%;
-    /* La altura ocupará el 100% del contenedor */
+    height: auto; /* Se cambia a height: auto para mantener la proporción de la imagen */
     object-fit: contain;
-    /* La imagen se ajustará para caber dentro del contenedor sin distorsionarse */
   }
 
   .content {
     margin-top: 20px;
   }
 
-  .img-bottonn {
+  .img-button {
     width: 1em;
-    /* Establece el ancho de la imagen como 1 em (equivalente al tamaño de un h2) */
     height: 1em;
-    /* Establece la altura de la imagen como 1 em */
   }
+
   .carousel-inner .carousel-item {
-            transition: none !important;
-        }
+    transition: none !important;
+  }
+
+  /* Se añade estilo para evitar que el botón de regresar se estire */
+  .btn-back {
+    display: inline-block;
+    vertical-align: middle;
+  }
 </style>
+
 <div class="container-fluid">
   <div class="row">
     <div class="col-12">
-      <h2 class="p-3"><input type="image" src="https://static.vecteezy.com/system/resources/previews/005/951/810/non_2x/back-button-interface-icon-illustration-vector.jpg" class="img-bottonn"
-          alt="Regresar" onclick="history.back()">&nbsp&nbsp&nbsp Evaluación Área de estudio {{ imagen_satelital.name }}
+      <h2 class="p-3">
+        <!-- Se corrige el botón de regresar -->
+        <button class="btn btn-link btn-back" onclick="history.back()">
+          <img src="https://static.vecteezy.com/system/resources/previews/005/951/810/non_2x/back-button-interface-icon-illustration-vector.jpg" class="img-button" alt="Regresar">
+        </button>
+        &nbsp;&nbsp;&nbsp;Evaluación Área de estudio {{ imagen_satelital.name }}
       </h2>
     </div>
     <div class="col-6 full-height">
       <div class="image-container">
         <div id="carouselExample" class="carousel slide" data-ride="carousel" data-interval="false">
           <div class="carousel-inner">
-              {% for subimagen in subimagenes %}
-                  <div class="carousel-item {% if forloop.first %}active{% endif %}">
-                      <img src="{{ subimagen.subImagen.url }}" class="d-block w-100" alt="Subimagen {{ subimagen.id }}">
-                      <div class="carousel-caption d-none d-md-block">
-                          <h5>Año Imagen: {{ subimagen.anio_imagen }}</h5>
-                          <p>Porcentaje: {{ subimagen.porcentaje|floatformat:2  }}</p>
-                      </div>
-                  </div>
-              {% endfor %}
+            {% for subimagen in subimagenes %}
+            <div class="carousel-item {% if forloop.first %}active{% endif %}">
+              <img src="{{ subimagen.subImagen.url }}" class="d-block w-100" alt="Subimagen {{ subimagen.id }}">
+              <div class="carousel-caption d-none d-md-block">
+                <h5>Año Imagen: {{ subimagen.anio_imagen }}</h5>
+                <p>Porcentaje: {{ subimagen.porcentaje|floatformat:2 }}</p>
+              </div>
+            </div>
+            {% endfor %}
           </div>
           <a class="carousel-control-prev" href="#carouselExample" role="button" data-slide="prev">
-              <span class="carousel-control-prev-icon" aria-hidden="true"></span>
-              <span class="sr-only">Siguiente</span>
+            <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+            <span class="sr-only">Siguiente</span>
           </a>
           <a class="carousel-control-next" href="#carouselExample" role="button" data-slide="next">
-              <span class="carousel-control-next-icon" aria-hidden="true"></span>
-              <span class="sr-only">Anterior</span>
+            <span class="carousel-control-next-icon" aria-hidden="true"></span>
+            <span class="sr-only">Anterior</span>
           </a>
         </div>
       </div>
     </div>
     <div class="col-6 full-height">
-      <img src="data:image/png;base64,{{ imagen_base64 }}" alt="Gráfico">
+      <img src="data:image/png;base64,{{ imagen_base64 }}" alt="Gráfico" class="w-100"> <!-- Se añade clase w-100 para que la imagen ocupe todo el ancho -->
     </div>
   </div>
 </div>
